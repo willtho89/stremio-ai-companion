@@ -1,0 +1,8 @@
+# Development and testing dependencies
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+httpx>=0.24.0
+
+# Include all production dependencies
+-r requirements.txt

@@ -144,12 +144,31 @@ export STREMIO_AI_ENCRYPTION_KEY="your-custom-encryption-key"
 - **Mood-Based Lists**: "Movies to Cheer You Up", "Thought-Provoking Dramas"
 - **Personalized Recommendations**: Collections tailored to your viewing history
 
+## 🧪 Testing
+
+The project includes comprehensive unit and integration tests to ensure reliability and maintainability.
+
+### Running Tests
+
+```bash
+# Install development and test dependencies
+pip install -r requirements-dev.txt
+
+# Run all tests
+pytest
+
+# Generate test coverage report
+pytest --cov=app
+```
+
+For more detailed information about testing, see the [tests/README.md](tests/README.md) file.
+
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Test thoroughly (run the test suite with `pytest`)
 5. Submit a pull request
 
 ## 📄 License
