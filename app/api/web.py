@@ -49,31 +49,6 @@ async def configure_page(request: Request, config: Optional[str] = Query(None)):
     )
 
 
-@router.get("/config/{config}/debug")
-async def debug_config(config: str):
-    """
-    Debug endpoint to help troubleshoot config issues.
-
-    Returns a summary of the configuration without sensitive data.
-    """
-    try:
-        config_data = encryption_service.decrypt(config)
-        config_obj = Config.model_validate(json.loads(config_data))
-        return {
-            "status": "valid",
-            "config_length": len(config),
-            "decrypted_length": len(config_data),
-            "config_summary": {
-                "openai_base_url": config_obj.openai_base_url,
-                "model_name": config_obj.model_name,
-                "max_results": config_obj.max_results,
-                "use_posterdb": config_obj.use_posterdb,
-            },
-        }
-    except Exception as e:
-        return {"status": "invalid", "error": str(e), "config_length": len(config)}
-
-
 @router.get("/config/{config}/preview", response_class=HTMLResponse)
 async def preview_page(request: Request, config: str):
     """
