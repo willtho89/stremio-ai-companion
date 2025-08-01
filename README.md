@@ -2,11 +2,14 @@
 
 🎬 **Your AI-powered movie discovery companion for Stremio** - Find the perfect movies to watch with intelligent recommendations and curated collections (coming soon).
 
+![Stremio AI Companion Demo](.assets/stremio-ai-companion.gif)
+
 ## ✨ Features
 
 - **AI Movie Discovery**: Find movies using natural language - "sci-fi movies about time travel" or "feel-good comedies from the 90s"
 - **Smart Recommendations**: AI understands context and mood to suggest perfect matches
 - **Rich Movie Data**: Complete information from TMDB with optional enhanced artwork from RPDB
+- **Performance**: Normal requests (without caching) typically complete in just 5-6 seconds, providing quick and responsive movie discovery ⚡
 - **Curated Collections**: AI-generated movie collections based on themes, moods, and genres (coming soon)
 - **Privacy First**: No database required - your preferences encrypted in shareable URLs
 - **Seamless Integration**: Works natively within Stremio as a catalog addon
