@@ -340,8 +340,10 @@
 
         function installStremio() {
             const manifestUrl = '{{ manifest_url }}';
-            const stremioUrl = `stremio://${encodeURIComponent(manifestUrl)}`;
-            window.location.href = stremioUrl;
+            // Remove protocol and use stremio:// format
+            const cleanUrl = manifestUrl.replace(/^https?:\/\//, '');
+            const stremioUrl = `stremio://${cleanUrl}`;
+            window.open(stremioUrl, '_blank');
         }
 
         function installStremioWeb() {
