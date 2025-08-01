@@ -89,9 +89,23 @@ async def preview_page(request: Request, config: str):
         config_data = encryption_service.decrypt(config)
         config_obj = Config.model_validate(json.loads(config_data))
         scheme = get_request_scheme(request)
-        manifest_url = f"{scheme}://{request.url.netloc}/config/{config}/manifest.json"
+
+        # Build manifest URLs for all types
+        base_url = f"{scheme}://{request.url.netloc}/config/{config}"
+        manifest_urls = {
+            "combined": f"{base_url}/manifest.json",
+            "movie": f"{base_url}/movie/manifest.json",
+            "series": f"{base_url}/series/manifest.json",
+        }
+
         return templates.TemplateResponse(
-            "preview.html", {"request": request, "manifest_url": manifest_url, "config": config_obj}
+            "preview.html",
+            {
+                "request": request,
+                "manifest_url": manifest_urls["combined"],  # Keep backward compatibility
+                "manifest_urls": manifest_urls,
+                "config": config_obj,
+            },
         )
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error in preview: {e}")

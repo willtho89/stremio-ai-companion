@@ -8,6 +8,7 @@ import time
 from functools import lru_cache, wraps
 
 from fastapi import APIRouter, HTTPException
+from typing import Optional, List
 
 from app.core.logging import logger
 from app.models.config import Config
@@ -169,10 +170,73 @@ async def _process_series_metadata_pipeline(tmdb_service, rpdb_service, series_t
         return []
 
 
+def build_manifest(types: Optional[List[str]] = None) -> dict:
+    """
+    Build a Stremio manifest with specified content types.
+
+    Args:
+        types: List of content types to include ("movie", "series").
+               If None, includes both types.
+
+    Returns:
+        Dictionary containing the Stremio manifest
+    """
+    if types is None:
+        types = ["movie", "series"]
+
+    # Determine addon ID and name based on types
+    if len(types) == 1:
+        if types[0] == "movie":
+            addon_id = f"{settings.STREMIO_ADDON_ID}-movie"
+            name = "AI Movie Companion"
+            description = "Your AI-powered movie discovery companion"
+        else:  # series
+            addon_id = f"{settings.STREMIO_ADDON_ID}-series"
+            name = "AI Series Companion"
+            description = "Your AI-powered series discovery companion"
+    else:
+        addon_id = settings.STREMIO_ADDON_ID
+        name = "AI Companion"
+        description = "Your AI-powered movie discovery companion"
+
+    # Build catalogs for specified types
+    catalogs = []
+    for content_type in types:
+        if content_type == "movie":
+            catalogs.append(
+                {
+                    "type": "movie",
+                    "id": settings.STREMIO_ADDON_ID.replace(".", "_") + "_movie",
+                    "name": "AI Movie Discovery",
+                    "extra": [{"name": "search", "isRequired": True}],
+                }
+            )
+        elif content_type == "series":
+            catalogs.append(
+                {
+                    "type": "series",
+                    "id": settings.STREMIO_ADDON_ID.replace(".", "_") + "_series",
+                    "name": "AI Series Discovery",
+                    "extra": [{"name": "search", "isRequired": True}],
+                }
+            )
+
+    return {
+        "id": addon_id,
+        "version": settings.APP_VERSION,
+        "name": name,
+        "description": description,
+        "logo": "https://raw.githubusercontent.com/willtho89/stremio-ai-companion/refs/heads/main/.assets/logo2_256.png",
+        "resources": ["catalog"],
+        "types": types,
+        "catalogs": catalogs,
+    }
+
+
 @router.get("/config/{config}/manifest.json")
 async def get_manifest(config: str):
     """
-    Return the Stremio addon manifest.
+    Return the Stremio addon manifest for combined movies and series.
 
     This endpoint is called by Stremio to get information about the addon.
     """
@@ -181,31 +245,41 @@ async def get_manifest(config: str):
         # validate model
         Config.model_validate(json.loads(config_data))
 
-        return {
-            "id": settings.STREMIO_ADDON_ID,
-            "version": settings.APP_VERSION,
-            "name": "AI Companion",
-            "description": "Your AI-powered movie discovery companion",
-            "logo": "https://raw.githubusercontent.com/willtho89/stremio-ai-companion/refs/heads/main/.assets/logo2_256.png",
-            "resources": ["catalog"],
-            "types": ["movie", "series"],
-            "catalogs": [
-                {
-                    "type": "movie",
-                    "id": settings.STREMIO_ADDON_ID.replace(".", "_") + "_movie",
-                    "name": "AI Movie Discovery",
-                    "extra": [{"name": "search", "isRequired": True}],
-                },
-                {
-                    "type": "series",
-                    "id": settings.STREMIO_ADDON_ID.replace(".", "_") + "_series",
-                    "name": "AI Series Discovery",
-                    "extra": [{"name": "search", "isRequired": True}],
-                },
-            ],
-        }
+        return build_manifest(None)  # Combined manifest
     except Exception as e:
         logger.error(f"Manifest request failed: {e}")
+        raise HTTPException(status_code=400, detail="Invalid config")
+
+
+@router.get("/config/{config}/movie/manifest.json")
+async def get_movie_manifest(config: str):
+    """
+    Return the Stremio addon manifest for movies only.
+    """
+    try:
+        config_data = encryption_service.decrypt(config)
+        # validate model
+        Config.model_validate(json.loads(config_data))
+
+        return build_manifest(["movie"])
+    except Exception as e:
+        logger.error(f"Movie manifest request failed: {e}")
+        raise HTTPException(status_code=400, detail="Invalid config")
+
+
+@router.get("/config/{config}/series/manifest.json")
+async def get_series_manifest(config: str):
+    """
+    Return the Stremio addon manifest for series only.
+    """
+    try:
+        config_data = encryption_service.decrypt(config)
+        # validate model
+        Config.model_validate(json.loads(config_data))
+
+        return build_manifest(["series"])
+    except Exception as e:
+        logger.error(f"Series manifest request failed: {e}")
         raise HTTPException(status_code=400, detail="Invalid config")
 
 
@@ -305,3 +379,37 @@ async def get_catalog_search(config: str, content_type: ContentType, catalog_id:
     """
     # Always use the non-cached version for explicit searches
     return await _process_catalog_request(config, search, content_type)
+
+
+# New routes for split manifests - movie catalog routes
+@router.get("/config/{config}/movie/catalog/movie/{catalog_id}.json")
+async def get_movie_catalog(config: str, catalog_id: str):
+    """
+    Movie-specific catalog endpoint for the movies-only addon.
+    """
+    return await _cached_catalog(config, ContentType.MOVIE)
+
+
+@router.get("/config/{config}/movie/catalog/movie/{catalog_id}/search={search}.json")
+async def get_movie_catalog_search(config: str, catalog_id: str, search: str):
+    """
+    Movie-specific catalog search endpoint for the movies-only addon.
+    """
+    return await _process_catalog_request(config, search, ContentType.MOVIE)
+
+
+# New routes for split manifests - series catalog routes
+@router.get("/config/{config}/series/catalog/series/{catalog_id}.json")
+async def get_series_catalog(config: str, catalog_id: str):
+    """
+    Series-specific catalog endpoint for the series-only addon.
+    """
+    return await _cached_catalog(config, ContentType.SERIES)
+
+
+@router.get("/config/{config}/series/catalog/series/{catalog_id}/search={search}.json")
+async def get_series_catalog_search(config: str, catalog_id: str, search: str):
+    """
+    Series-specific catalog search endpoint for the series-only addon.
+    """
+    return await _process_catalog_request(config, search, ContentType.SERIES)

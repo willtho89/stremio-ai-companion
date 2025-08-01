@@ -86,10 +86,41 @@ Your existing settings will be pre-filled in the form for easy editing.
 - `GET /configure?config=...` - Edit existing encrypted configuration (pre-filled form)
 - `POST /save-config` - Save and encrypt configuration
 - `GET /config/{config}/preview` - Preview addon configuration
-- `GET /config/{config}/manifest.json` - Stremio manifest endpoint
-- `GET /config/{config}/catalog/movie/{catalog_id}.json` - Movie catalog endpoint
-- `GET /config/{config}/catalog/movie/{catalog_id}/search={search}.json` - Movie catalog search endpoint
+- `GET /config/{config}/manifest.json` - Stremio manifest endpoint (combined movies + series)
+- `GET /config/{config}/movie/manifest.json` - Dedicated movies-only manifest endpoint
+- `GET /config/{config}/series/manifest.json` - Dedicated series-only manifest endpoint
+- `GET /config/{config}/catalog/movie/{catalog_id}.json` - Movie catalog endpoint (combined addon)
+- `GET /config/{config}/catalog/movie/{catalog_id}/search={search}.json` - Movie catalog search endpoint (combined addon)
+- `GET /config/{config}/catalog/series/{catalog_id}.json` - Series catalog endpoint (combined addon)
+- `GET /config/{config}/catalog/series/{catalog_id}/search={search}.json` - Series catalog search endpoint (combined addon)
+- `GET /config/{config}/movie/catalog/movie/{catalog_id}.json` - Movie catalog endpoint (movies-only addon)
+- `GET /config/{config}/movie/catalog/movie/{catalog_id}/search={search}.json` - Movie catalog search endpoint (movies-only addon)
+- `GET /config/{config}/series/catalog/series/{catalog_id}.json` - Series catalog endpoint (series-only addon)
+- `GET /config/{config}/series/catalog/series/{catalog_id}/search={search}.json` - Series catalog search endpoint (series-only addon)
 - `GET /config/{config}` - Redirect to configure page with existing config
+
+## 🎭 Split Manifest Support (v0.2.0+)
+
+You can now install separate addons for movies and series, or use the combined addon:
+
+### Installation Options
+
+1. **Combined Addon** (default): Install both movies and series in one addon
+   - Use: `/config/{config}/manifest.json`
+
+2. **Movies Only**: Install a dedicated movies-only addon
+   - Use: `/config/{config}/movie/manifest.json`
+
+3. **Series Only**: Install a dedicated series-only addon
+   - Use: `/config/{config}/series/manifest.json`
+
+### Benefits
+
+- **Cleaner Stremio Interface**: Separate addons appear as distinct entries
+- **Focused Discovery**: Search only movies or only series when you know what you want
+- **Backward Compatibility**: Existing installations continue to work unchanged
+
+The preview page includes a dropdown to select your preferred addon type and generates the appropriate manifest URL.
 
 ## 🔒 Security
 

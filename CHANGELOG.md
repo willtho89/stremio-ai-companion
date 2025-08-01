@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0]
+
+### Added
+- Split manifest support for separate movie and series addons
+  - Query parameter support: `?type=movie` or `?type=series`
+  - Dedicated endpoints: `/manifest/movie.json` and `/manifest/series.json`
+  - Web UI dropdown to select addon type (Combined, Movies Only, Series Only)
+  - New `SPLIT_MANIFESTS` environment variable for future configuration
+- Comprehensive test coverage for all manifest URL variations
+- Backward compatibility maintained for existing manifest URLs
+
+### Changed
+- Enhanced preview page with manifest type selection dropdown
+- Improved manifest builder with configurable content types
+- Updated API routes to support multiple manifest formats
+
 ## [0.1.1]
 
 ### Added
