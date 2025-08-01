@@ -9,10 +9,11 @@ from fastapi.templating import Jinja2Templates
 from app.api.stremio import router as stremio_router
 from app.api.web import router as web_router
 from app.core.logging import logger
+from apps import __version__
 
 # Create FastAPI app
 app = FastAPI(
-    title="Stremio AI Companion", description="Your AI-powered movie discovery companion for Stremio", version="0.0.5"
+    title="Stremio AI Companion", description="Your AI-powered movie discovery companion for Stremio", version=__version__
 )
 
 # Add CORS middleware

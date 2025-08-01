@@ -62,7 +62,6 @@ jobs:
       run: |
         NEW_VERSION="${{ steps.tag_version.outputs.new_version }}"
         sed -i "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" app/__init__.py
-        sed -i "s/version=\".*\"/version=\"$NEW_VERSION\"/" app/api/__init__.py
 
     - name: Commit version file changes
       run: |
