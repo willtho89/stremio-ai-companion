@@ -43,7 +43,7 @@ class LLMService:
         Returns:
             List of movie titles with years
         """
-        self.logger.info(f"Generating {max_results} movie suggestions for query: '{query}'")
+        self.logger.debug(f"Generating {max_results} movie suggestions for query: '{query}'")
 
         # Get current date for context
         current_date = datetime.now().strftime("%B %Y")
@@ -64,13 +64,13 @@ Each title must be a real movie that exists and genuinely matches the user's req
                     messages=[{"role": "user", "content": prompt}],
                     response_format=MovieSuggestions,
                     temperature=0.7,
-                    max_tokens=500,
+                    max_tokens=5000,
                     timeout=30,
                 )
 
                 if response.choices[0].message.parsed:
                     movies = response.choices[0].message.parsed.movies
-                    self.logger.info(f"Successfully parsed {len(movies)} movies using structured output")
+                    self.logger.debug(f"Successfully parsed {len(movies)} movies using structured output")
                     return movies[:max_results]
                 else:
                     # Fall back to refusal handling or regular completion
@@ -106,7 +106,7 @@ Query: {query}"""
 
                 movies = json.loads(content)
                 if isinstance(movies, list) and all(isinstance(movie, str) for movie in movies):
-                    self.logger.info(f"Successfully parsed {len(movies)} movies from fallback completion")
+                    self.logger.debug(f"Successfully parsed {len(movies)} movies from fallback completion")
                     return movies[:max_results]
                 else:
                     self.logger.warning("Invalid movie list format from LLM, returning query as fallback")
@@ -133,7 +133,7 @@ Query: {query}"""
         Returns:
             List of TV series titles with years
         """
-        self.logger.info(f"Generating {max_results} TV series suggestions for query: '{query}'")
+        self.logger.debug(f"Generating {max_results} TV series suggestions for query: '{query}'")
 
         # Get current date for context
         current_date = datetime.now().strftime("%B %Y")
@@ -160,7 +160,7 @@ Each title must be a real TV series that exists and genuinely matches the user's
 
                 if response.choices[0].message.parsed:
                     series = response.choices[0].message.parsed.series
-                    self.logger.info(f"Successfully parsed {len(series)} TV series using structured output")
+                    self.logger.debug(f"Successfully parsed {len(series)} TV series using structured output")
                     return series[:max_results]
                 else:
                     # Fall back to refusal handling or regular completion
@@ -196,7 +196,7 @@ Query: {query}"""
 
                 series = json.loads(content)
                 if isinstance(series, list) and all(isinstance(show, str) for show in series):
-                    self.logger.info(f"Successfully parsed {len(series)} TV series from fallback completion")
+                    self.logger.debug(f"Successfully parsed {len(series)} TV series from fallback completion")
                     return series[:max_results]
                 else:
                     self.logger.warning("Invalid TV series list format from LLM, returning query as fallback")

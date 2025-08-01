@@ -166,7 +166,7 @@ class TMDBService:
                 )
                 response.raise_for_status()
                 details = response.json()
-                self.logger.info(
+                self.logger.debug(
                     f"Successfully fetched details for movie ID {movie_id}: {details.get('title', 'Unknown')}"
                 )
                 return details
@@ -198,7 +198,7 @@ class TMDBService:
                 response = await client.get(f"{self.base_url}/tv/{tv_id}", params=params, headers=self._get_headers())
                 response.raise_for_status()
                 details = response.json()
-                self.logger.info(
+                self.logger.debug(
                     f"Successfully fetched details for TV series ID {tv_id}: {details.get('name', 'Unknown')}"
                 )
                 return details

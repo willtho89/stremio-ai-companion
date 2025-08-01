@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     APP_NAME: str = Field(default="Stremio AI Companion")
     APP_VERSION: str = Field(default=__version__)
     APP_DESCRIPTION: str = Field(default="Your AI-powered movie discovery companion for Stremio")
+    STREMIO_ADDON_ID: str = Field(default="ai.companion.stremio", description="Stremio addon ID")
 
     # Server settings
     HOST: str = Field(default="0.0.0.0")

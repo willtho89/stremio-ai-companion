@@ -1,6 +1,7 @@
 """
 API routes for the Stremio AI Companion application.
 """
+from datetime import datetime
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +14,9 @@ from app import __version__
 
 # Create FastAPI app
 app = FastAPI(
-    title="Stremio AI Companion", description="Your AI-powered movie discovery companion for Stremio", version=__version__
+    title="Stremio AI Companion",
+    description="Your AI-powered movie discovery companion for Stremio",
+    version=__version__,
 )
 
 # Add CORS middleware
@@ -30,9 +33,11 @@ app.add_middleware(
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Log all incoming requests and their responses."""
+    start_time = datetime.now()
     logger.info(f"{request.method} {request.url} - Headers: {dict(request.headers)}")
     response = await call_next(request)
-    logger.info(f"Response: {response.status_code}")
+    duration = datetime.now() - start_time
+    logger.info(f"Response: {response.status_code} - Duration: {duration.total_seconds()}s")
     return response
 
 
