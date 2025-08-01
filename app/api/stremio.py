@@ -4,10 +4,10 @@ Stremio addon API routes for the Stremio AI Companion application.
 
 import asyncio
 import json
-import re
-from typing import Optional
+import time
+from functools import lru_cache, wraps
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 
 from app.core.logging import logger
 from app.models.config import Config
@@ -18,86 +18,39 @@ from app.services.tmdb import TMDBService
 from app.utils.conversion import movie_to_stremio_meta, tv_to_stremio_meta
 from app.utils.parsing import parse_movie_with_year
 from app.core.config import settings
+from models.enums import ContentType
+from utils.parsing import detect_user_intent
 
 router = APIRouter(tags=["Stremio API"])
 
 
-def _detect_user_intent(search: str) -> Optional[str]:
+def timed_lru_cache(seconds: int, maxsize: int = 128):
     """
-    Detect user intent from search query using regex patterns.
+    Decorator that creates an LRU cache with a time-based expiration.
 
     Args:
-        search: Search query from user
+        seconds: Number of seconds to keep the cache valid
+        maxsize: Maximum size of the LRU cache
 
     Returns:
-        "movie" if user is specifically looking for movies,
-        "series" if user is specifically looking for TV shows/series,
-        None if intent is unclear or general
+        Decorated function with time-based cache expiration
     """
-    if not search:
-        return None
 
-    search_lower = search.lower()
+    def wrapper_cache(func):
+        func = lru_cache(maxsize=maxsize)(func)
+        func.lifetime = seconds
+        func.expiration = time.time() + seconds
 
-    # Movie-specific patterns (more comprehensive)
-    movie_patterns = [
-        r"\bmovies?\b",  # "movie", "movies"
-        r"\bfilms?\b",  # "film", "films"
-        r"\bcinema\b",  # "cinema"
-        r"\bflicks?\b",  # "flick", "flicks"
-        r"\bmotion pictures?\b",  # "motion picture"
-        r"\bfeature films?\b",  # "feature film"
-        r"\bblockbusters?\b",  # "blockbuster"
-    ]
+        @wraps(func)
+        def wrapped_func(*args, **kwargs):
+            if time.time() > func.expiration:
+                func.cache_clear()
+                func.expiration = time.time() + func.lifetime
+            return func(*args, **kwargs)
 
-    # TV/Series-specific patterns (more comprehensive)
-    series_patterns = [
-        r"\btv\s+shows?\b",  # "tv show", "tv shows"
-        r"\btelevision\s+shows?\b",  # "television show"
-        r"\btelevision\b",  # "television"
-        r"\bseries\b",  # "series"
-        r"\bshows?\b",  # "show", "shows" (when not preceded by movie-related words)
-        r"\btv\s+series\b",  # "tv series"
-        r"\btelevision\s+series\b",  # "television series"
-        r"\bepisodes?\b",  # "episode", "episodes"
-        r"\bseasons?\b",  # "season", "seasons"
-        r"\bsitcoms?\b",  # "sitcom", "sitcoms"
-        r"\bdramas?\s+series\b",  # "drama series"
-        r"\bminiseries\b",  # "miniseries"
-        r"\bdocumentary\s+series\b",  # "documentary series"
-    ]
+        return wrapped_func
 
-    # Check for movie patterns
-    movie_matches = sum(1 for pattern in movie_patterns if re.search(pattern, search_lower))
-
-    # Check for series patterns, but exclude "shows" if it's preceded by movie-related words
-    series_matches = 0
-    for pattern in series_patterns:
-        if pattern == r"\bshows?\b":
-            # Special handling for "shows" - exclude if preceded by movie words or in non-TV context
-            if (
-                re.search(r"\bshows?\b", search_lower)
-                and not re.search(r"\b(?:movie|film|cinema)\s+shows?\b", search_lower)
-                and not re.search(r"\bshow\s+me\b", search_lower)
-            ):
-                series_matches += 1
-        else:
-            if re.search(pattern, search_lower):
-                series_matches += 1
-
-    # Check for mixed content indicators
-    has_mixed_content = re.search(r"\b(?:and|or)\b", search_lower) and movie_matches > 0 and series_matches > 0
-
-    # Determine intent based on matches
-    if has_mixed_content:
-        return None  # Mixed content, unclear intent
-    elif movie_matches > 0 and series_matches == 0:
-        return "movie"
-    elif series_matches > 0 and movie_matches == 0:
-        return "series"
-    else:
-        # If both or neither are detected, intent is unclear
-        return None
+    return wrapper_cache
 
 
 async def _process_movie_metadata_pipeline(tmdb_service, rpdb_service, movie_titles: list, include_adult: bool):
@@ -150,7 +103,7 @@ async def _process_movie_metadata_pipeline(tmdb_service, rpdb_service, movie_tit
             meta = movie_to_stremio_meta(movie_details, poster_url)
             movie_metas.append(meta)
 
-        logger.info(f"Movie metadata pipeline completed with {len(movie_metas)} results")
+        logger.debug(f"Movie metadata pipeline completed with {len(movie_metas)} results")
         return movie_metas
 
     except Exception as e:
@@ -208,7 +161,7 @@ async def _process_series_metadata_pipeline(tmdb_service, rpdb_service, series_t
             meta = tv_to_stremio_meta(series_details, poster_url)
             series_metas.append(meta)
 
-        logger.info(f"TV series metadata pipeline completed with {len(series_metas)} results")
+        logger.debug(f"TV series metadata pipeline completed with {len(series_metas)} results")
         return series_metas
 
     except Exception as e:
@@ -229,7 +182,7 @@ async def get_manifest(config: str):
         Config.model_validate(json.loads(config_data))
 
         return {
-            "id": "ai.companion.stremio",
+            "id": settings.STREMIO_ADDON_ID,
             "version": settings.APP_VERSION,
             "name": "AI Companion",
             "description": "Your AI-powered movie discovery companion",
@@ -239,13 +192,13 @@ async def get_manifest(config: str):
             "catalogs": [
                 {
                     "type": "movie",
-                    "id": "ai_companion_movie",
+                    "id": settings.STREMIO_ADDON_ID.replace(".", "_") + "_movie",
                     "name": "AI Movie Discovery",
                     "extra": [{"name": "search", "isRequired": True}],
                 },
                 {
                     "type": "series",
-                    "id": "ai_companion_series",
+                    "id": settings.STREMIO_ADDON_ID.replace(".", "_") + "_series",
                     "name": "AI Series Discovery",
                     "extra": [{"name": "search", "isRequired": True}],
                 },
@@ -256,15 +209,14 @@ async def get_manifest(config: str):
         raise HTTPException(status_code=400, detail="Invalid config")
 
 
-async def _process_catalog_request(config: str, catalog_id: str, search: str, content_type: str):
+async def _process_catalog_request(config: str, search: str, content_type: ContentType, max_results: int | None = None):
     """
     Shared catalog processing logic for both movies and TV series.
 
     Args:
         config: Encrypted configuration string
-        catalog_id: Catalog ID from Stremio
         search: Search query from Stremio
-        content_type: Type of content to return ("movie" or "series")
+        content_type: Type of content to return (ContentType.MOVIE or ContentType.SERIES)
 
     Returns:
         Dictionary with movie/series metadata in Stremio format
@@ -276,20 +228,21 @@ async def _process_catalog_request(config: str, catalog_id: str, search: str, co
         config_data = encryption_service.decrypt(config)
         config_obj = Config.model_validate(json.loads(config_data))
 
+
+        if not max_results:
+            max_results = config_obj.max_results
+
+
         logger.info(
-            f"Processing {content_type} catalog request for '{search}' with {config_obj.max_results} max results"
+            f"Processing {content_type} catalog request for '{search}' with {max_results} max results"
         )
 
         llm_service = LLMService(config_obj)
         tmdb_service = TMDBService(config_obj.tmdb_read_access_token)
         rpdb_service = RPDBService(config_obj.posterdb_api_key) if config_obj.use_posterdb else None
 
-        # Set default search if empty
-        if not search:
-            search = "Give me some great content you think are must sees"
-
         # Detect user intent from search query
-        user_intent = _detect_user_intent(search)
+        user_intent = detect_user_intent(search)
 
         # If user intent conflicts with endpoint type, return empty list
         if user_intent and user_intent != content_type:
@@ -298,10 +251,8 @@ async def _process_catalog_request(config: str, catalog_id: str, search: str, co
             )
             return {"metas": []}
 
-        max_results = config_obj.max_results
-
         # Generate suggestions based on content type
-        if content_type == "movie":
+        if content_type == ContentType.MOVIE:
             movie_titles = await llm_service.generate_movie_suggestions(search, max_results)
             logger.info(f"Generated {len(movie_titles)} movie suggestions: {movie_titles}")
             movie_metas = await _process_movie_metadata_pipeline(
@@ -309,7 +260,7 @@ async def _process_catalog_request(config: str, catalog_id: str, search: str, co
             )
             logger.info(f"Returning {len(movie_metas)} movie metadata entries")
             return {"metas": movie_metas}
-        else:  # content_type == "series"
+        else:  # content_type == ContentType.SERIES
             series_titles = await llm_service.generate_tv_suggestions(search, max_results)
             logger.info(f"Generated {len(series_titles)} TV series suggestions: {series_titles}")
             series_metas = await _process_series_metadata_pipeline(
@@ -323,41 +274,38 @@ async def _process_catalog_request(config: str, catalog_id: str, search: str, co
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/config/{config}/catalog/movie/{catalog_id}.json")
-async def get_catalog(config: str, catalog_id: str, search: Optional[str] = Query(default=None)):
+@timed_lru_cache(seconds=14400)  # 4 hours
+async def _cached_catalog(config: str, content_type: ContentType):
+    """
+    Cached version of the catalogue view.
+    """
+
+    # NOTE caching does not work too well in a uvicorn setting with multiple workers…
+    return await _process_catalog_request(
+        config,
+        "Give me your current must watches which are available to stream right now",
+        content_type,
+        max_results=100
+    )
+
+
+@router.get("/config/{config}/catalog/{content_type}/{catalog_id}.json")
+async def get_catalog(config: str, content_type: ContentType, catalog_id: str):
     """
     Path-based catalog endpoint.
 
     This endpoint is called by Stremio to get movie metadata based on a search query.
     """
-    return await _process_catalog_request(config, catalog_id, search, "movie")
+
+    return await _cached_catalog(config, content_type)
 
 
-@router.get("/config/{config}/catalog/movie/{catalog_id}/search={search}.json")
-async def get_catalog_search(config: str, catalog_id: str, search: str):
+@router.get("/config/{config}/catalog/{content_type}/{catalog_id}/search={search}.json")
+async def get_catalog_search(config: str, content_type: ContentType, catalog_id: str, search: str):
     """
     Path-based catalog search endpoint for movies.
 
     This endpoint is called by Stremio to get movie metadata based on a search query.
     """
-    return await _process_catalog_request(config, catalog_id, search, "movie")
-
-
-@router.get("/config/{config}/catalog/series/{catalog_id}.json")
-async def get_series_catalog(config: str, catalog_id: str, search: Optional[str] = Query(default=None)):
-    """
-    Path-based catalog endpoint for TV series.
-
-    This endpoint is called by Stremio to get TV series metadata based on a search query.
-    """
-    return await _process_catalog_request(config, catalog_id, search, "series")
-
-
-@router.get("/config/{config}/catalog/series/{catalog_id}/search={search}.json")
-async def get_series_catalog_search(config: str, catalog_id: str, search: str):
-    """
-    Path-based catalog search endpoint for TV series.
-
-    This endpoint is called by Stremio to get TV series metadata based on a search query.
-    """
-    return await _process_catalog_request(config, catalog_id, search, "series")
+    # Always use the non-cached version for explicit searches
+    return await _process_catalog_request(config, search, content_type)

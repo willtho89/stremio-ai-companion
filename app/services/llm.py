@@ -92,7 +92,7 @@ Query: {query}"""
                     model=self.model,
                     messages=[{"role": "user", "content": fallback_prompt}],
                     temperature=0.7,
-                    max_tokens=500,
+                    max_tokens=5000,
                     timeout=30,
                 )
 
@@ -154,7 +154,7 @@ Each title must be a real TV series that exists and genuinely matches the user's
                     messages=[{"role": "user", "content": prompt}],
                     response_format=TVSeriesSuggestions,
                     temperature=0.7,
-                    max_tokens=500,
+                    max_tokens=5000,
                     timeout=30,
                 )
 
@@ -182,7 +182,7 @@ Query: {query}"""
                     model=self.model,
                     messages=[{"role": "user", "content": fallback_prompt}],
                     temperature=0.7,
-                    max_tokens=500,
+                    max_tokens=5000,
                     timeout=30,
                 )
 
