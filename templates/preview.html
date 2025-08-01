@@ -204,9 +204,20 @@
         
         <div class="manifest-section">
             <h3>🔗 Your Stremio Manifest URL</h3>
-            <p>Copy this URL and add it to Stremio as a new addon:</p>
+            <p>Choose how to install your AI Companion addon:</p>
             <div class="manifest-url">{{ manifest_url }}</div>
-            <button class="copy-btn" onclick="copyToClipboard('{{ manifest_url }}')">Copy Manifest URL</button>
+            
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                <button class="copy-btn" onclick="installStremio()" style="background: rgba(76, 175, 80, 0.3); border-color: rgba(76, 175, 80, 0.5); flex: 1; min-width: 120px;">
+                    📱 Stremio
+                </button>
+                <button class="copy-btn" onclick="installStremioWeb()" style="background: rgba(33, 150, 243, 0.3); border-color: rgba(33, 150, 243, 0.5); flex: 1; min-width: 120px;">
+                    🌐 Stremio Web
+                </button>
+                <button class="copy-btn" onclick="copyToClipboard('{{ manifest_url }}')" style="flex: 1; min-width: 120px;">
+                    📋 Copy URL
+                </button>
+            </div>
         </div>
         
         <div class="config-section">
@@ -270,6 +281,18 @@
                     btn.textContent = originalText;
                 }, 2000);
             });
+        }
+
+        function installStremio() {
+            const manifestUrl = '{{ manifest_url }}';
+            const stremioUrl = `stremio://${encodeURIComponent(manifestUrl)}`;
+            window.location.href = stremioUrl;
+        }
+
+        function installStremioWeb() {
+            const manifestUrl = '{{ manifest_url }}';
+            const webUrl = `https://web.stremio.com/#/addons?addon=${encodeURIComponent(manifestUrl)}`;
+            window.open(webUrl, '_blank');
         }
 
         async function testSearch() {
