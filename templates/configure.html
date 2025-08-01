@@ -222,6 +222,11 @@
                 </button>
             </div>
         </div>
+        
+        <div id="error" class="result error" style="display: none;">
+            <h3>Error</h3>
+            <p id="errorMessage"></p>
+        </div>
     </div>
 
     <script>
@@ -235,10 +240,12 @@
             
             const submitBtn = document.querySelector('.submit-btn');
             const result = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
             
             submitBtn.disabled = true;
             submitBtn.textContent = 'Generating...';
             result.style.display = 'none';
+            errorDiv.style.display = 'none';
             
             const formData = new FormData(this);
             
@@ -251,7 +258,10 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    document.getElementById('manifestUrl').textContent = data.manifest_url;
+                    const manifestUrlElement = document.getElementById('manifestUrl');
+                    if (manifestUrlElement) {
+                        manifestUrlElement.textContent = data.manifest_url;
+                    }
                     window.previewUrl = data.preview_url; // Store for button access
                     result.className = 'result success';
                     result.style.display = 'block';
@@ -259,9 +269,11 @@
                     throw new Error(data.detail || 'Configuration failed');
                 }
             } catch (error) {
-                result.innerHTML = `<h3>Error</h3><p>${error.message}</p>`;
-                result.className = 'result error';
-                result.style.display = 'block';
+                const errorDiv = document.getElementById('error');
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = error.message;
+                result.style.display = 'none';
+                errorDiv.style.display = 'block';
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Generate Manifest URL';
@@ -282,7 +294,7 @@
         
         function openPreview() {
             if (window.previewUrl) {
-                window.open(window.previewUrl, '_blank');
+                window.location.href = window.previewUrl;
             }
         }
     </script>

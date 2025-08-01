@@ -84,7 +84,7 @@
         <div style="margin-top: 2rem; text-align: center;">
             <p style="opacity: 0.8; margin-bottom: 1rem;">Already have a config? Paste your manifest URL to edit:</p>
             <div style="display: flex; gap: 0.5rem; max-width: 500px; margin: 0 auto;">
-                <input type="text" id="configUrl" placeholder="https://yourserver.com/manifest.json?config=..." 
+                <input type="text" id="configUrl" placeholder="https://yourserver.com/config/abc123/manifest.json" 
                        style="flex: 1; padding: 0.75rem; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; background: rgba(255,255,255,0.1); color: white; font-size: 0.9rem;">
                 <button onclick="extractAndReconfigure()" 
                         style="background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3); color: white; padding: 0.75rem 1rem; border-radius: 10px; cursor: pointer; font-size: 0.9rem;">
@@ -100,11 +100,14 @@
                 
                 try {
                     const urlObj = new URL(url);
-                    const config = urlObj.searchParams.get('config');
-                    if (config) {
+                    
+                    // Extract config from path-based format: /config/{config}/manifest.json
+                    const pathMatch = urlObj.pathname.match(/\/config\/([^\/]+)\/manifest\.json$/);
+                    if (pathMatch) {
+                        const config = pathMatch[1];
                         window.location.href = `/configure?config=${encodeURIComponent(config)}`;
                     } else {
-                        alert('No config parameter found in the URL');
+                        alert('No config found in the URL. Please use the format: https://yourserver.com/config/your-config/manifest.json');
                     }
                 } catch (e) {
                     alert('Invalid URL format');

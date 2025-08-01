@@ -309,10 +309,11 @@
             movieResults.innerHTML = '<p>Loading...</p>';
             
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const config = urlParams.get('config');
+                // Extract config from current path: /config/{config}/preview
+                const pathParts = window.location.pathname.split('/');
+                const config = pathParts[2]; // config is the 3rd part (index 2)
                 
-                const response = await fetch(`/catalog/movie/ai_search.json?config=${encodeURIComponent(config)}&search=${encodeURIComponent(query)}`);
+                const response = await fetch(`/config/${encodeURIComponent(config)}/catalog/movie/ai_companion.json?search=${encodeURIComponent(query)}`);
                 const data = await response.json();
                 
                 if (data.metas && data.metas.length > 0) {
@@ -343,16 +344,18 @@
         });
         
         function goToReconfigure() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const config = urlParams.get('config');
+            // Extract config from current path: /config/{config}/preview
+            const pathParts = window.location.pathname.split('/');
+            const config = pathParts[2]; // config is the 3rd part (index 2)
             if (config) {
                 window.location.href = `/configure?config=${encodeURIComponent(config)}`;
             }
         }
         
         function goBackToConfigure() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const config = urlParams.get('config');
+            // Extract config from current path: /config/{config}/preview
+            const pathParts = window.location.pathname.split('/');
+            const config = pathParts[2]; // config is the 3rd part (index 2)
             if (config) {
                 window.location.href = `/configure?config=${encodeURIComponent(config)}`;
             } else {

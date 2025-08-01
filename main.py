@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request, Form, HTTPException, Query
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import asyncio
 import json
@@ -53,6 +54,23 @@ log_level = os.getenv("LOG_LEVEL", "INFO")
 logger = setup_logging(log_level)
 
 app = FastAPI(title="Stremio AI Companion", description="Your AI-powered movie discovery companion for Stremio")
+
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"{request.method} {request.url} - Headers: {dict(request.headers)}")
+    response = await call_next(request)
+    logger.info(f"Response: {response.status_code}")
+    return response
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 templates = Jinja2Templates(directory="templates")
 
@@ -430,8 +448,8 @@ async def configure_page(request: Request, config: Optional[str] = Query(None)):
 
 
 
-@app.get("/debug-config")
-async def debug_config(config: str = Query(...)):
+@app.get("/config/{config}/debug")
+async def debug_config(config: str):
     """Debug endpoint to help troubleshoot config issues"""
     try:
         config_data = encryption_service.decrypt(config)
@@ -454,12 +472,12 @@ async def debug_config(config: str = Query(...)):
             "config_length": len(config)
         }
 
-@app.get("/preview", response_class=HTMLResponse)
-async def preview_page(request: Request, config: str = Query(...)):
+@app.get("/config/{config}/preview", response_class=HTMLResponse)
+async def preview_page(request: Request, config: str):
     try:
         config_data = encryption_service.decrypt(config)
         config_obj = Config.model_validate(json.loads(config_data))
-        manifest_url = f"{request.url.scheme}://{request.url.netloc}/manifest.json?config={config}"
+        manifest_url = f"{request.url.scheme}://{request.url.netloc}/config/{config}/manifest.json"
         return templates.TemplateResponse("preview.html", {
             "request": request,
             "manifest_url": manifest_url,
@@ -504,12 +522,12 @@ async def save_config(
         )
         
         encrypted_config = encryption_service.encrypt(config.model_dump_json())
-        manifest_url = f"{request.url.scheme}://{request.url.netloc}/manifest.json?config={encrypted_config}"
+        manifest_url = f"{request.url.scheme}://{request.url.netloc}/config/{encrypted_config}/manifest.json"
         
         return JSONResponse({
             "success": True,
             "manifest_url": manifest_url,
-            "preview_url": f"{request.url.scheme}://{request.url.netloc}/preview?config={encrypted_config}"
+            "preview_url": f"{request.url.scheme}://{request.url.netloc}/config/{encrypted_config}/preview"
         })
     except ValidationError as e:
         error_messages = []
@@ -528,23 +546,28 @@ async def save_config(
             "detail": f"Configuration error: {str(e)}"
         }, status_code=500)
 
-@app.get("/manifest.json")
-async def get_manifest(config: str = Query(...)):
+@app.get("/config/{config}")
+async def config_redirect(config: str):
+    """Redirect to configure page with existing config"""
+    return RedirectResponse(url=f"/configure?config={config}")
+
+@app.get("/config/{config}/manifest.json")
+async def get_manifest(config: str):
     try:
         config_data = encryption_service.decrypt(config)
         config_obj = Config.model_validate(json.loads(config_data))
         
         return {
             "id": "ai.companion.stremio",
-            "version": "1.0.0",
+            "version": "0.0.1",
             "name": "AI Companion",
             "description": "Your AI-powered movie discovery companion",
-            "logo": "https://via.placeholder.com/256x256/667eea/ffffff?text=🎬",
+            "logo": "https://raw.githubusercontent.com/willtho89/stremio-ai-companion/refs/heads/main/.assets/logo2_256.png",
             "resources": ["catalog"],
             "types": ["movie"],
             "catalogs": [{
                 "type": "movie",
-                "id": "ai_companion",
+                "id": "ai_companion_movie",
                 "name": "AI Movie Discovery",
                 "extra": [{"name": "search", "isRequired": True}]
             }]
@@ -552,14 +575,12 @@ async def get_manifest(config: str = Query(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid config")
 
-@app.get("/catalog/movie/{catalog_id}.json")
-async def get_catalog(catalog_id: str, config: str = Query(...), search: str = Query(...)):
+async def _process_catalog_request(config: str, catalog_id: str, search: str):
+    """Shared catalog processing logic"""
     try:
         config_data = encryption_service.decrypt(config)
         config_obj = Config.model_validate(json.loads(config_data))
-        
 
-        
         logger.info(f"Processing catalog request for '{search}' with {config_obj.max_results} max results")
         
         llm_service = LLMService(config_obj)
@@ -567,8 +588,8 @@ async def get_catalog(catalog_id: str, config: str = Query(...), search: str = Q
         rpdb_service = RPDBService(config_obj.posterdb_api_key) if config_obj.use_posterdb else None
         
         # Parse the search query to extract title and year
-        search_title, search_year = parse_query_with_year(search)
-        logger.info(f"Parsed search query - Title: '{search_title}', Year: {search_year}")
+        if not search:
+            search = "Give me some movies you think are must sees"
         
         movie_titles = await llm_service.generate_movie_suggestions(search, config_obj.max_results)
         logger.info(f"Generated {len(movie_titles)} movie suggestions: {movie_titles}")
@@ -631,6 +652,17 @@ async def get_catalog(catalog_id: str, config: str = Query(...), search: str = Q
     except Exception as e:
         logger.error(f"Catalog request failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/config/{config}/catalog/movie/{catalog_id}.json")
+async def get_catalog(config: str, catalog_id: str, search: str | None = Query(default=None)):
+    """Path-based catalog endpoint"""
+    return await _process_catalog_request(config, catalog_id, search)
+
+@app.get("/config/{config}/catalog/movie/{catalog_id}/search={search}.json")
+async def get_catalog(config: str, catalog_id: str, search: str):
+    """Path-based catalog endpoint"""
+    return await _process_catalog_request(config, catalog_id, search)
+
 
 if __name__ == "__main__":
     import uvicorn
