@@ -57,8 +57,6 @@ class TestStremioRouter:
         assert response.status_code == 400
         assert "detail" in response.json()
 
-
-
     def test_get_movie_manifest(self, client, mock_encryption_service):
         """Test the dedicated movie manifest endpoint."""
         config = Config(

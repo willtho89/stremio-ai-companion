@@ -135,6 +135,21 @@
         .back-link:hover {
             color: white;
         }
+        .manifest-section {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+        .manifest-url {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -211,21 +226,7 @@
         </form>
         
         <div id="result" class="result">
-            <h3>Your Personal Stremio Manifest</h3>
-            <p>Choose how to install your AI Companion addon:</p>
-            <div class="url-box" id="manifestUrl"></div>
-            
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                <button class="copy-btn" onclick="installStremio()" style="background: rgba(76, 175, 80, 0.3); border-color: rgba(76, 175, 80, 0.5); flex: 1; min-width: 120px;">
-                    📱 Stremio
-                </button>
-                <button class="copy-btn" onclick="installStremioWeb()" style="background: rgba(33, 150, 243, 0.3); border-color: rgba(33, 150, 243, 0.5); flex: 1; min-width: 120px;">
-                    🌐 Stremio Web
-                </button>
-                <button class="copy-btn" onclick="copyToClipboard('manifestUrl')" style="flex: 1; min-width: 120px;">
-                    📋 Copy URL
-                </button>
-            </div>
+            {% include 'manifest_section.html' %}
             
             <div style="margin-top: 1.5rem; text-align: center;">
                 <button class="copy-btn" onclick="openPreview()" style="background: rgba(76, 175, 80, 0.3); border-color: rgba(76, 175, 80, 0.5); padding: 0.75rem 1.5rem; font-size: 1rem;">
@@ -269,10 +270,14 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    const manifestUrlElement = document.getElementById('manifestUrl');
-                    if (manifestUrlElement) {
-                        manifestUrlElement.textContent = data.manifest_url;
-                    }
+                    // Update manifest URLs for the shared partial
+                    manifestUrls.combined = data.manifest_urls.combined;
+                    manifestUrls.movie = data.manifest_urls.movie;
+                    manifestUrls.series = data.manifest_urls.series;
+                    
+                    // Update the displayed URL
+                    updateManifestUrl();
+                    
                     window.previewUrl = data.preview_url; // Store for button access
                     result.className = 'result success';
                     result.style.display = 'block';
@@ -291,8 +296,7 @@
             }
         });
 
-        function copyToClipboard(elementId) {
-            const text = document.getElementById(elementId).textContent;
+        function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
                 const btn = event.target;
                 const originalText = btn.textContent;
@@ -309,19 +313,7 @@
             }
         }
 
-        function installStremio() {
-            const manifestUrl = document.getElementById('manifestUrl').textContent;
-            // Remove protocol and use stremio:// format
-            const cleanUrl = manifestUrl.replace(/^https?:\/\//, '');
-            const stremioUrl = `stremio://${cleanUrl}`;
-            window.open(stremioUrl, '_blank');
-        }
 
-        function installStremioWeb() {
-            const manifestUrl = document.getElementById('manifestUrl').textContent;
-            const webUrl = `https://web.stremio.com/#/addons?addon=${encodeURIComponent(manifestUrl)}`;
-            window.open(webUrl, '_blank');
-        }
     </script>
 </body>
 </html>

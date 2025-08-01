@@ -257,32 +257,7 @@
         <a href="#" onclick="goBackToConfigure()" class="back-link">← Back to Configure</a>
         <h1>Preview Your AI Companion</h1>
         
-        <div class="manifest-section">
-            <h3>🔗 Your Stremio Manifest URL</h3>
-            <p>Choose the type of addon to install:</p>
-            
-            <div style="margin-bottom: 1rem;">
-                <select id="manifestType" onchange="updateManifestUrl()" style="width: 100%; padding: 0.75rem; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; background: rgba(255,255,255,0.1); color: white; font-size: 1rem; backdrop-filter: blur(10px);">
-                    <option value="combined">Combined (Movies + Series)</option>
-                    <option value="movie">Movies Only</option>
-                    <option value="series">Series Only</option>
-                </select>
-            </div>
-            
-            <div class="manifest-url" id="manifestUrl">{{ manifest_url }}</div>
-            
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                <button class="copy-btn" onclick="installStremio()" style="background: rgba(76, 175, 80, 0.3); border-color: rgba(76, 175, 80, 0.5); flex: 1; min-width: 120px;">
-                    📱 Stremio
-                </button>
-                <button class="copy-btn" onclick="installStremioWeb()" style="background: rgba(33, 150, 243, 0.3); border-color: rgba(33, 150, 243, 0.5); flex: 1; min-width: 120px;">
-                    🌐 Stremio Web
-                </button>
-                <button class="copy-btn" onclick="copyToClipboard(getCurrentManifestUrl())" style="flex: 1; min-width: 120px;">
-                    📋 Copy URL
-                </button>
-            </div>
-        </div>
+        {% include 'manifest_section.html' %}
         
         <div class="config-section">
             <h3>⚙️ Configuration Summary</h3>
@@ -336,23 +311,6 @@
     </div>
 
     <script>
-        // Manifest URLs from server
-        const manifestUrls = {
-            combined: '{{ manifest_urls.combined }}',
-            movie: '{{ manifest_urls.movie }}',
-            series: '{{ manifest_urls.series }}'
-        };
-        
-        function getCurrentManifestUrl() {
-            const type = document.getElementById('manifestType').value;
-            return manifestUrls[type];
-        }
-        
-        function updateManifestUrl() {
-            const manifestUrlDiv = document.getElementById('manifestUrl');
-            manifestUrlDiv.textContent = getCurrentManifestUrl();
-        }
-        
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
                 const btn = event.target;
@@ -362,20 +320,6 @@
                     btn.textContent = originalText;
                 }, 2000);
             });
-        }
-
-        function installStremio() {
-            const manifestUrl = getCurrentManifestUrl();
-            // Remove protocol and use stremio:// format
-            const cleanUrl = manifestUrl.replace(/^https?:\/\//, '');
-            const stremioUrl = `stremio://${cleanUrl}`;
-            window.open(stremioUrl, '_blank');
-        }
-
-        function installStremioWeb() {
-            const manifestUrl = getCurrentManifestUrl();
-            const webUrl = `https://web.stremio.com/#/addons?addon=${encodeURIComponent(manifestUrl)}`;
-            window.open(webUrl, '_blank');
         }
 
         async function testSearch() {

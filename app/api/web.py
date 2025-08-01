@@ -154,13 +154,21 @@ async def save_config(
 
         encrypted_config = encryption_service.encrypt(config.model_dump_json())
         scheme = get_request_scheme(request)
-        manifest_url = f"{scheme}://{request.url.netloc}/config/{encrypted_config}/manifest.json"
+
+        # Build manifest URLs for all types
+        base_url = f"{scheme}://{request.url.netloc}/config/{encrypted_config}"
+        manifest_urls = {
+            "combined": f"{base_url}/manifest.json",
+            "movie": f"{base_url}/movie/manifest.json",
+            "series": f"{base_url}/series/manifest.json",
+        }
 
         return JSONResponse(
             {
                 "success": True,
-                "manifest_url": manifest_url,
-                "preview_url": f"{scheme}://{request.url.netloc}/config/{encrypted_config}/preview",
+                "manifest_url": manifest_urls["combined"],  # Keep backward compatibility
+                "manifest_urls": manifest_urls,
+                "preview_url": f"{base_url}/preview",
             }
         )
     except ValidationError as e:
