@@ -165,15 +165,15 @@
             <div class="form-group">
                 <label for="model_name">Model Name</label>
                 <input type="text" id="model_name" name="model_name" 
-                       value="{% if existing_config %}{{ existing_config.model_name }}{% else %}gpt-3.5-turbo{% endif %}" placeholder="gpt-3.5-turbo">
+                       value="{% if existing_config %}{{ existing_config.model_name }}{% else %}gpt-4.1-mini{% endif %}" placeholder="gpt-4.1-mini">
                 <div class="help-text">OpenAI model to use for movie suggestions</div>
             </div>
             
             <div class="form-group">
-                <label for="tmdb_api_key">TMDB API Key *</label>
-                <input type="password" id="tmdb_api_key" name="tmdb_api_key" required 
-                       placeholder="Your TMDB API key" value="{% if existing_config %}{{ existing_config.tmdb_api_key }}{% endif %}">
-                <div class="help-text">Get your free API key from <a href="https://www.themoviedb.org/settings/api" target="_blank" style="color: rgba(255,255,255,0.8);">TMDB</a></div>
+                <label for="tmdb_read_access_token">TMDB Read Access Token *</label>
+                <input type="password" id="tmdb_read_access_token" name="tmdb_read_access_token" required 
+                       placeholder="Your TMDB read access token" value="{% if existing_config %}{{ existing_config.tmdb_read_access_token }}{% endif %}">
+                <div class="help-text">Get your free read access token from <a href="https://www.themoviedb.org/settings/api" target="_blank" style="color: rgba(255,255,255,0.8);">TMDB API Settings</a></div>
             </div>
             
             <div class="form-group">
@@ -182,6 +182,16 @@
                        value="{% if existing_config %}{{ existing_config.max_results }}{% else %}20{% endif %}" min="1" max="50">
                 <div class="help-text">Maximum number of movies to return per search</div>
             </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="include_adult" name="include_adult" {% if existing_config and existing_config.include_adult %}checked{% endif %}>
+                    <label for="include_adult">Include adult content in search results</label>
+                </div>
+                <div class="help-text">Allow adult/mature content to appear in movie search results</div>
+            </div>
+            
+
             
             <div class="form-group">
                 <div class="checkbox-group">
