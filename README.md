@@ -137,7 +137,7 @@ export STREMIO_AI_ENCRYPTION_KEY="your-custom-encryption-key"
 2. **AI understands your mood** and suggests perfect movie matches
 3. **Rich metadata** fetched from TMDB with detailed information
 4. **Enhanced artwork** (optional) from RPDB for beautiful posters
-5. **Instant results** displayed in your Stremio catalog
+5. **Fast results** displayed in your Stremio catalog
 
 ### Coming Soon: Curated Collections
 - **Themed Collections**: "Best Movies for Date Night", "Hidden Sci-Fi Gems"
@@ -162,3 +162,4 @@ MIT License - see LICENSE file for details
 - [TMDB](https://www.themoviedb.org/) for movie metadata
 - [RatingPosterDB](https://ratingposterdb.com/) for enhanced artwork
 - [OpenAI](https://openai.com/) for LLM capabilities
+- [OpenCode](https://opencode.ai) for great Coding Agent (this project is completely vibe coded ;-)
