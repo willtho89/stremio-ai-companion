@@ -4,9 +4,9 @@ Pytest configuration and fixtures for the Stremio AI Companion tests.
 
 import os
 import sys
+from typing import Dict, Any
+
 import pytest
-from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
 
 # Add the project root directory to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -29,7 +29,7 @@ def sample_config() -> Config:
         max_results=20,
         include_adult=False,
         use_posterdb=False,
-        posterdb_api_key=None
+        posterdb_api_key=None,
     )
 
 
@@ -46,7 +46,7 @@ def sample_config_with_posterdb() -> Config:
         max_results=20,
         include_adult=False,
         use_posterdb=True,
-        posterdb_api_key="rpdb-test1234567890"
+        posterdb_api_key="rpdb-test1234567890",
     )
 
 
@@ -61,7 +61,7 @@ def sample_movie_suggestions() -> MovieSuggestions:
             "The Godfather (1972)",
             "The Dark Knight (2008)",
             "Pulp Fiction (1994)",
-            "Inception (2010)"
+            "Inception (2010)",
         ]
     )
 
@@ -79,14 +79,9 @@ def sample_tmdb_movie() -> Dict[str, Any]:
         "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
         "backdrop_path": "/hZkgoQYus5vegHoetLkCJzb17zJ.jpg",
         "vote_average": 8.4,
-        "genres": [
-            {"id": 18, "name": "Drama"},
-            {"id": 53, "name": "Thriller"}
-        ],
+        "genres": [{"id": 18, "name": "Drama"}, {"id": 53, "name": "Thriller"}],
         "runtime": 139,
-        "external_ids": {
-            "imdb_id": "tt0137523"
-        }
+        "external_ids": {"imdb_id": "tt0137523"},
     }
 
 
@@ -105,5 +100,5 @@ def sample_stremio_meta() -> StremioMeta:
         releaseInfo="1999",
         imdbRating=8.4,
         genre=["Drama", "Thriller"],
-        runtime="139 min"
+        runtime="139 min",
     )

@@ -4,6 +4,7 @@ Tests for the Config model.
 
 import pytest
 from pydantic import ValidationError
+
 from app.models.config import Config
 
 
@@ -20,9 +21,9 @@ class TestConfig:
             max_results=20,
             include_adult=False,
             use_posterdb=False,
-            posterdb_api_key=None
+            posterdb_api_key=None,
         )
-        
+
         assert config.openai_api_key == "sk-test123456789012345678901234567890"
         assert config.openai_base_url == "https://api.openai.com/v1"
         assert config.model_name == "gpt-4.1-mini"
@@ -36,9 +37,9 @@ class TestConfig:
         """Test default values for optional fields."""
         config = Config(
             openai_api_key="sk-test123456789012345678901234567890",
-            tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890"
+            tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
         )
-        
+
         assert config.openai_base_url == "https://api.openai.com/v1"
         assert config.model_name == "gpt-4.1-mini"
         assert config.max_results == 20
@@ -49,21 +50,15 @@ class TestConfig:
     def test_invalid_openai_api_key(self):
         """Test validation for invalid OpenAI API key."""
         with pytest.raises(ValidationError) as exc_info:
-            Config(
-                openai_api_key="",
-                tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890"
-            )
-        
+            Config(openai_api_key="", tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890")
+
         assert "OpenAI API key must be provided and valid" in str(exc_info.value)
 
     def test_invalid_tmdb_token(self):
         """Test validation for invalid TMDB token."""
         with pytest.raises(ValidationError) as exc_info:
-            Config(
-                openai_api_key="sk-test123456789012345678901234567890",
-                tmdb_read_access_token=""
-            )
-        
+            Config(openai_api_key="sk-test123456789012345678901234567890", tmdb_read_access_token="")
+
         assert "TMDB read access token must be provided and valid" in str(exc_info.value)
 
     def test_invalid_max_results_low(self):
@@ -72,9 +67,9 @@ class TestConfig:
             Config(
                 openai_api_key="sk-test123456789012345678901234567890",
                 tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-                max_results=0
+                max_results=0,
             )
-        
+
         assert "Max results must be between 1 and 50" in str(exc_info.value)
 
     def test_invalid_max_results_high(self):
@@ -83,9 +78,9 @@ class TestConfig:
             Config(
                 openai_api_key="sk-test123456789012345678901234567890",
                 tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-                max_results=51
+                max_results=51,
             )
-        
+
         assert "Max results must be between 1 and 50" in str(exc_info.value)
 
     def test_invalid_openai_url(self):
@@ -94,9 +89,9 @@ class TestConfig:
             Config(
                 openai_api_key="sk-test123456789012345678901234567890",
                 tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-                openai_base_url="invalid-url"
+                openai_base_url="invalid-url",
             )
-        
+
         assert "OpenAI base URL must be a valid HTTP/HTTPS URL" in str(exc_info.value)
 
     def test_missing_posterdb_key(self):
@@ -106,9 +101,9 @@ class TestConfig:
                 openai_api_key="sk-test123456789012345678901234567890",
                 tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
                 use_posterdb=True,
-                posterdb_api_key=None
+                posterdb_api_key=None,
             )
-        
+
         assert "RPDB API key is required when RPDB is enabled" in str(exc_info.value)
 
     def test_posterdb_key_not_required_when_disabled(self):
@@ -117,8 +112,8 @@ class TestConfig:
             openai_api_key="sk-test123456789012345678901234567890",
             tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
             use_posterdb=False,
-            posterdb_api_key=None
+            posterdb_api_key=None,
         )
-        
+
         assert config.use_posterdb is False
         assert config.posterdb_api_key is None

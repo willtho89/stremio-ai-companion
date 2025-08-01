@@ -4,17 +4,15 @@ API routes for the Stremio AI Companion application.
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import os
 
+from app.api.stremio import router as stremio_router
+from app.api.web import router as web_router
 from app.core.logging import logger
 
 # Create FastAPI app
 app = FastAPI(
-    title="Stremio AI Companion",
-    description="Your AI-powered movie discovery companion for Stremio",
-    version="0.0.1"
+    title="Stremio AI Companion", description="Your AI-powered movie discovery companion for Stremio", version="0.0.1"
 )
 
 # Add CORS middleware
@@ -26,6 +24,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
+
 # Add request logging middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -35,12 +34,6 @@ async def log_requests(request: Request, call_next):
     logger.info(f"Response: {response.status_code}")
     return response
 
-# Setup templates
-templates = Jinja2Templates(directory="templates")
-
-# Import routes
-from app.api.web import router as web_router
-from app.api.stremio import router as stremio_router
 
 # Include routers
 app.include_router(web_router)

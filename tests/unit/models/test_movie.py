@@ -4,6 +4,7 @@ Tests for the movie-related models.
 
 import pytest
 from pydantic import ValidationError
+
 from app.models.movie import MovieSuggestions, StremioMeta
 
 
@@ -13,13 +14,9 @@ class TestMovieSuggestions:
     def test_valid_movie_suggestions(self):
         """Test creating a valid MovieSuggestions object."""
         suggestions = MovieSuggestions(
-            movies=[
-                "The Shawshank Redemption (1994)",
-                "The Godfather (1972)",
-                "The Dark Knight (2008)"
-            ]
+            movies=["The Shawshank Redemption (1994)", "The Godfather (1972)", "The Dark Knight (2008)"]
         )
-        
+
         assert len(suggestions.movies) == 3
         assert suggestions.movies[0] == "The Shawshank Redemption (1994)"
         assert suggestions.movies[1] == "The Godfather (1972)"
@@ -29,14 +26,14 @@ class TestMovieSuggestions:
         """Test validation for empty movies list."""
         with pytest.raises(ValidationError) as exc_info:
             MovieSuggestions(movies=[])
-        
+
         assert "At least one movie suggestion is required" in str(exc_info.value)
 
     def test_none_movies_list(self):
         """Test validation for None movies list."""
         with pytest.raises(ValidationError) as exc_info:
             MovieSuggestions(movies=None)
-        
+
         assert "Input should be a valid list" in str(exc_info.value)
 
 
@@ -55,15 +52,18 @@ class TestStremioMeta:
             releaseInfo="1999",
             imdbRating=8.4,
             genre=["Drama", "Thriller"],
-            runtime="139 min"
+            runtime="139 min",
         )
-        
+
         assert meta.id == "tmdb:550"
         assert meta.type == "movie"
         assert meta.name == "Fight Club"
         assert meta.poster == "https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
         assert meta.background == "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
-        assert meta.description == "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy."
+        assert (
+            meta.description
+            == "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy."
+        )
         assert meta.releaseInfo == "1999"
         assert meta.imdbRating == 8.4
         assert meta.genre == ["Drama", "Thriller"]
@@ -71,11 +71,8 @@ class TestStremioMeta:
 
     def test_minimal_stremio_meta(self):
         """Test creating a minimal StremioMeta object with only required fields."""
-        meta = StremioMeta(
-            id="tmdb:123",
-            name="Minimal Movie"
-        )
-        
+        meta = StremioMeta(id="tmdb:123", name="Minimal Movie")
+
         assert meta.id == "tmdb:123"
         assert meta.type == "movie"  # Default value
         assert meta.name == "Minimal Movie"
@@ -91,23 +88,20 @@ class TestStremioMeta:
         """Test validation for missing required fields."""
         with pytest.raises(ValidationError) as exc_info:
             StremioMeta(type="movie")
-        
+
         assert "Field required" in str(exc_info.value)
-        
+
         with pytest.raises(ValidationError) as exc_info:
             StremioMeta(id="tmdb:123")
-        
+
         assert "Field required" in str(exc_info.value)
 
     def test_model_dump_exclude_none(self):
         """Test that model_dump with exclude_none works correctly."""
-        meta = StremioMeta(
-            id="tmdb:123",
-            name="Test Movie"
-        )
-        
+        meta = StremioMeta(id="tmdb:123", name="Test Movie")
+
         dumped = meta.model_dump(exclude_none=True)
-        
+
         assert "id" in dumped
         assert "type" in dumped
         assert "name" in dumped

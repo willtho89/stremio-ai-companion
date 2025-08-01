@@ -2,7 +2,6 @@
 Tests for the parsing utility functions.
 """
 
-import pytest
 from app.utils.parsing import parse_query_with_year, parse_movie_with_year
 
 
