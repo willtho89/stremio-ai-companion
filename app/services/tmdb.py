@@ -50,7 +50,7 @@ class TMDBService:
         Returns:
             Dictionary with movie data or None if not found
         """
-        self.logger.info(f"Searching TMDB for movie: '{title}'" + (f" ({year})" if year else ""))
+        self.logger.debug(f"Searching TMDB for movie: '{title}'" + (f" ({year})" if year else ""))
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 params = {
@@ -74,7 +74,7 @@ class TMDBService:
 
                 if data.get("results"):
                     result = data["results"][0]
-                    self.logger.info(
+                    self.logger.debug(
                         f"Found TMDB result for '{title}': {result.get('title', 'Unknown')} ({result.get('release_date', 'Unknown')[:4] if result.get('release_date') else 'Unknown'})"
                     )
                     return result
@@ -105,7 +105,7 @@ class TMDBService:
         Returns:
             Dictionary with TV series data or None if not found
         """
-        self.logger.info(f"Searching TMDB for TV series: '{title}'" + (f" ({year})" if year else ""))
+        self.logger.debug(f"Searching TMDB for TV series: '{title}'" + (f" ({year})" if year else ""))
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 params = {
@@ -129,7 +129,7 @@ class TMDBService:
 
                 if data.get("results"):
                     result = data["results"][0]
-                    self.logger.info(
+                    self.logger.debug(
                         f"Found TMDB result for '{title}': {result.get('name', 'Unknown')} ({result.get('first_air_date', 'Unknown')[:4] if result.get('first_air_date') else 'Unknown'})"
                     )
                     return result
@@ -156,7 +156,7 @@ class TMDBService:
         Returns:
             Dictionary with movie details or None if not found
         """
-        self.logger.info(f"Fetching TMDB details for movie ID: {movie_id}")
+        self.logger.debug(f"Fetching TMDB details for movie ID: {movie_id}")
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 params = {"language": "en-US", "append_to_response": "external_ids"}  # This includes IMDB ID
@@ -190,7 +190,7 @@ class TMDBService:
         Returns:
             Dictionary with TV series details or None if not found
         """
-        self.logger.info(f"Fetching TMDB details for TV series ID: {tv_id}")
+        self.logger.debug(f"Fetching TMDB details for TV series ID: {tv_id}")
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 params = {"language": "en-US", "append_to_response": "external_ids"}  # This includes IMDB ID

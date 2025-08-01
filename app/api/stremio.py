@@ -18,8 +18,8 @@ from app.services.tmdb import TMDBService
 from app.utils.conversion import movie_to_stremio_meta, tv_to_stremio_meta
 from app.utils.parsing import parse_movie_with_year
 from app.core.config import settings
-from models.enums import ContentType
-from utils.parsing import detect_user_intent
+from app.models.enums import ContentType
+from app.utils.parsing import detect_user_intent
 
 router = APIRouter(tags=["Stremio API"])
 
@@ -228,14 +228,10 @@ async def _process_catalog_request(config: str, search: str, content_type: Conte
         config_data = encryption_service.decrypt(config)
         config_obj = Config.model_validate(json.loads(config_data))
 
-
         if not max_results:
             max_results = config_obj.max_results
 
-
-        logger.info(
-            f"Processing {content_type} catalog request for '{search}' with {max_results} max results"
-        )
+        logger.info(f"Processing {content_type} catalog request for '{search}' with {max_results} max results")
 
         llm_service = LLMService(config_obj)
         tmdb_service = TMDBService(config_obj.tmdb_read_access_token)
@@ -285,7 +281,7 @@ async def _cached_catalog(config: str, content_type: ContentType):
         config,
         "Give me your current must watches which are available to stream right now",
         content_type,
-        max_results=100
+        max_results=100,
     )
 
 

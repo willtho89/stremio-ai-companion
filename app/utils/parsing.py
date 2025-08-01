@@ -5,7 +5,7 @@ Parsing utilities for the Stremio AI Companion application.
 import re
 from typing import Tuple, Optional
 
-from models.enums import ContentType
+from app.models.enums import ContentType
 
 
 def parse_movie_with_year(movie_title: str) -> Tuple[str, Optional[int]]:

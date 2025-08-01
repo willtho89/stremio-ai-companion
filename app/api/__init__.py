@@ -1,6 +1,7 @@
 """
 API routes for the Stremio AI Companion application.
 """
+
 from datetime import datetime
 
 from fastapi import FastAPI, Request
