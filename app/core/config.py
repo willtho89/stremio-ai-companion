@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # RPDB settings
     RPDB_API_KEY: str | None = Field(default=None)
 
+    # Catalog settings
+    MAX_CATALOG_RESULTS: int = Field(default=50, description="Maximum number of results to return in cached catalog")
+
 
 class TestSettings(Settings):
     """

@@ -281,7 +281,7 @@ async def _cached_catalog(config: str, content_type: ContentType):
         config,
         "Give me your current must watches which are available to stream right now",
         content_type,
-        max_results=100,
+        max_results=settings.MAX_CATALOG_RESULTS,
     )
 
 
