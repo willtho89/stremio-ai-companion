@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configure AI Companion - Stremio</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+            box-sizing: border-box;
+        }
+        input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.15);
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+        .submit-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        .submit-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            display: none;
+        }
+        .result.success {
+            border-left: 4px solid #4CAF50;
+        }
+        .result.error {
+            border-left: 4px solid #f44336;
+        }
+        .url-box {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .copy-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .help-text {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.25rem;
+        }
+        .back-link {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        .back-link:hover {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+        <h1>{% if existing_config %}Reconfigure{% else %}Configure{% endif %} AI Companion</h1>
+        {% if existing_config %}
+        <p style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem;">
+            ✏️ Editing existing configuration. Make your changes below and save to generate a new manifest URL.
+        </p>
+        {% endif %}
+        
+        <form id="configForm">
+            <div class="form-group">
+                <label for="openai_api_key">OpenAI API Key *</label>
+                <input type="password" id="openai_api_key" name="openai_api_key" required 
+                       placeholder="sk-..." value="{% if existing_config %}{{ existing_config.openai_api_key }}{% endif %}">
+                <div class="help-text">Your OpenAI API key for LLM movie suggestions</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="openai_base_url">OpenAI Base URL</label>
+                <input type="url" id="openai_base_url" name="openai_base_url" 
+                       value="{% if existing_config %}{{ existing_config.openai_base_url }}{% else %}https://api.openai.com/v1{% endif %}" placeholder="https://api.openai.com/v1">
+                <div class="help-text">Use custom endpoint for OpenAI-compatible APIs</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="model_name">Model Name</label>
+                <input type="text" id="model_name" name="model_name" 
+                       value="{% if existing_config %}{{ existing_config.model_name }}{% else %}gpt-3.5-turbo{% endif %}" placeholder="gpt-3.5-turbo">
+                <div class="help-text">OpenAI model to use for movie suggestions</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="tmdb_api_key">TMDB API Key *</label>
+                <input type="password" id="tmdb_api_key" name="tmdb_api_key" required 
+                       placeholder="Your TMDB API key" value="{% if existing_config %}{{ existing_config.tmdb_api_key }}{% endif %}">
+                <div class="help-text">Get your free API key from <a href="https://www.themoviedb.org/settings/api" target="_blank" style="color: rgba(255,255,255,0.8);">TMDB</a></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="max_results">Max Results</label>
+                <input type="number" id="max_results" name="max_results" 
+                       value="{% if existing_config %}{{ existing_config.max_results }}{% else %}20{% endif %}" min="1" max="50">
+                <div class="help-text">Maximum number of movies to return per search</div>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="use_posterdb" name="use_posterdb" {% if existing_config and existing_config.use_posterdb %}checked{% endif %}>
+                    <label for="use_posterdb">Use RPDB for custom artwork</label>
+                </div>
+            </div>
+            
+            <div class="form-group" id="posterdb_key_group" style="{% if existing_config and existing_config.use_posterdb %}display: block;{% else %}display: none;{% endif %}">
+                <label for="posterdb_api_key">RPDB API Key</label>
+                <input type="password" id="posterdb_api_key" name="posterdb_api_key" 
+                       placeholder="Your RPDB API key" value="{% if existing_config and existing_config.posterdb_api_key %}{{ existing_config.posterdb_api_key }}{% endif %}">
+                <div class="help-text">Optional: Enhanced movie posters from <a href="https://ratingposterdb.com" target="_blank" style="color: rgba(255,255,255,0.8);">RPDB</a></div>
+            </div>
+            
+            <button type="submit" class="submit-btn">Generate Manifest URL</button>
+        </form>
+        
+        <div id="result" class="result">
+            <h3>Your Personal Stremio Manifest</h3>
+            <p>Add this URL to Stremio as a new addon:</p>
+            <div class="url-box" id="manifestUrl"></div>
+            <button class="copy-btn" onclick="copyToClipboard('manifestUrl')">Copy Manifest URL</button>
+            
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <button class="copy-btn" onclick="openPreview()" style="background: rgba(76, 175, 80, 0.3); border-color: rgba(76, 175, 80, 0.5); padding: 0.75rem 1.5rem; font-size: 1rem;">
+                    🎬 Preview and Test
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('use_posterdb').addEventListener('change', function() {
+            const posterdbGroup = document.getElementById('posterdb_key_group');
+            posterdbGroup.style.display = this.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('configForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.querySelector('.submit-btn');
+            const result = document.getElementById('result');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Generating...';
+            result.style.display = 'none';
+            
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch('/save-config', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('manifestUrl').textContent = data.manifest_url;
+                    window.previewUrl = data.preview_url; // Store for button access
+                    result.className = 'result success';
+                    result.style.display = 'block';
+                } else {
+                    throw new Error(data.detail || 'Configuration failed');
+                }
+            } catch (error) {
+                result.innerHTML = `<h3>Error</h3><p>${error.message}</p>`;
+                result.className = 'result error';
+                result.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Generate Manifest URL';
+            }
+        });
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+        
+        function openPreview() {
+            if (window.previewUrl) {
+                window.open(window.previewUrl, '_blank');
+            }
+        }
+    </script>
+</body>
+</html>

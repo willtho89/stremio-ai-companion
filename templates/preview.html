@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview AI Companion - Stremio</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .back-link {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        .back-link:hover {
+            color: white;
+        }
+        .manifest-section {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+        .manifest-url {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .copy-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .config-section {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .config-item:last-child {
+            border-bottom: none;
+        }
+        .config-label {
+            font-weight: 600;
+            opacity: 0.8;
+        }
+        .config-value {
+            font-family: monospace;
+            background: rgba(0,0,0,0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .instructions {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+        .step {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+            position: relative;
+        }
+        .step::before {
+            content: counter(step-counter);
+            counter-increment: step-counter;
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: rgba(255,255,255,0.2);
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .instructions ol {
+            counter-reset: step-counter;
+            list-style: none;
+            padding: 0;
+        }
+        .test-section {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+        }
+        .test-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+            box-sizing: border-box;
+            margin-bottom: 1rem;
+        }
+        .test-input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+        .test-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        .test-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+        .test-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .test-results {
+            margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+        }
+        .movie-item {
+            background: rgba(255,255,255,0.1);
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .movie-poster {
+            width: 40px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .movie-info h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 0.9rem;
+        }
+        .movie-info p {
+            margin: 0;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="#" onclick="goBackToConfigure()" class="back-link">← Back to Configure</a>
+        <h1>Preview Your AI Companion</h1>
+        
+        <div class="manifest-section">
+            <h3>🔗 Your Stremio Manifest URL</h3>
+            <p>Copy this URL and add it to Stremio as a new addon:</p>
+            <div class="manifest-url">{{ manifest_url }}</div>
+            <button class="copy-btn" onclick="copyToClipboard('{{ manifest_url }}')">Copy Manifest URL</button>
+        </div>
+        
+        <div class="config-section">
+            <h3>⚙️ Configuration Summary</h3>
+            <p style="margin-bottom: 1rem;">
+                <a href="#" onclick="goToReconfigure()" 
+                   style="color: rgba(255,255,255,0.8); text-decoration: none; background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">
+                    ✏️ Edit Configuration
+                </a>
+            </p>
+            <div class="config-item">
+                <span class="config-label">OpenAI Base URL:</span>
+                <span class="config-value">{{ config.openai_base_url }}</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">Model:</span>
+                <span class="config-value">{{ config.model_name }}</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">Max Results:</span>
+                <span class="config-value">{{ config.max_results }}</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">RPDB:</span>
+                <span class="config-value">{{ "Enabled" if config.use_posterdb else "Disabled" }}</span>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>📱 How to Add to Stremio</h3>
+            <ol>
+                <li class="step">Open Stremio on your device</li>
+                <li class="step">Go to the Addons section</li>
+                <li class="step">Click "Add Addon" or the "+" button</li>
+                <li class="step">Paste your manifest URL above</li>
+                <li class="step">Click "Install" to add the AI Companion addon</li>
+                <li class="step">Start searching with natural language queries!</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧪 Test Your Configuration</h3>
+            <p>Try a search query to see how your addon will work:</p>
+            <input type="text" class="test-input" id="testQuery" placeholder="e.g., 'sci-fi movies about time travel' or 'romantic comedies from the 90s'">
+            <button class="test-btn" onclick="testSearch()">Test Search</button>
+            
+            <div class="test-results" id="testResults">
+                <h4>Search Results:</h4>
+                <div id="movieResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        async function testSearch() {
+            const query = document.getElementById('testQuery').value.trim();
+            if (!query) return;
+            
+            const btn = document.querySelector('.test-btn');
+            const results = document.getElementById('testResults');
+            const movieResults = document.getElementById('movieResults');
+            
+            btn.disabled = true;
+            btn.textContent = 'Searching...';
+            results.style.display = 'block';
+            movieResults.innerHTML = '<p>Loading...</p>';
+            
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const config = urlParams.get('config');
+                
+                const response = await fetch(`/catalog/movie/ai_search.json?config=${encodeURIComponent(config)}&search=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (data.metas && data.metas.length > 0) {
+                    movieResults.innerHTML = data.metas.map(movie => `
+                        <div class="movie-item">
+                            <img class="movie-poster" src="${movie.poster || ''}" alt="${movie.name}" onerror="this.style.display='none'">
+                            <div class="movie-info">
+                                <h4>${movie.name}</h4>
+                                <p>${movie.releaseInfo || 'Unknown year'} • ${movie.imdbRating ? movie.imdbRating.toFixed(1) + '/10' : 'No rating'}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    movieResults.innerHTML = '<p>No results found. Try a different search query.</p>';
+                }
+            } catch (error) {
+                movieResults.innerHTML = `<p>Error: ${error.message}</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Search';
+            }
+        }
+        
+        document.getElementById('testQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testSearch();
+            }
+        });
+        
+        function goToReconfigure() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const config = urlParams.get('config');
+            if (config) {
+                window.location.href = `/configure?config=${encodeURIComponent(config)}`;
+            }
+        }
+        
+        function goBackToConfigure() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const config = urlParams.get('config');
+            if (config) {
+                window.location.href = `/configure?config=${encodeURIComponent(config)}`;
+            } else {
+                window.location.href = '/configure';
+            }
+        }
+    </script>
+</body>
+</html>
