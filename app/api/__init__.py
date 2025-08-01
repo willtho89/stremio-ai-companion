@@ -12,7 +12,7 @@ from app.core.logging import logger
 
 # Create FastAPI app
 app = FastAPI(
-    title="Stremio AI Companion", description="Your AI-powered movie discovery companion for Stremio", version="0.0.4"
+    title="Stremio AI Companion", description="Your AI-powered movie discovery companion for Stremio", version="0.0.5"
 )
 
 # Add CORS middleware
