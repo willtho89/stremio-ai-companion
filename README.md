@@ -24,8 +24,8 @@ pip install -r requirements.txt
 
 ### 2. Get API Keys
 
-- **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
-- **TMDB API Key**: Get from [TMDB Settings](https://www.themoviedb.org/settings/api)
+- **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/account/api-keys)
+- **TMDB API Key**: Get from [TMDB API Documentation](https://developer.themoviedb.org/docs) (register for an API key from your account settings)
 - **RPDB API Key** (optional): Get from [RatingPosterDB](https://ratingposterdb.com/)
 
 ### 3. Run the Server
@@ -83,11 +83,13 @@ Your existing settings will be pre-filled in the form for easy editing.
 
 - `GET /` - Homepage with project description
 - `GET /configure` - Configuration form interface
-- `GET /reconfigure?config=...` - Edit existing encrypted configuration
+- `GET /configure?config=...` - Edit existing encrypted configuration (pre-filled form)
 - `POST /save-config` - Save and encrypt configuration
-- `GET /preview?config=...` - Preview addon configuration
-- `GET /manifest.json?config=...` - Stremio manifest endpoint
-- `GET /catalog/movie/{query}.json?config=...` - Movie catalog endpoint
+- `GET /config/{config}/preview` - Preview addon configuration
+- `GET /config/{config}/manifest.json` - Stremio manifest endpoint
+- `GET /config/{config}/catalog/movie/{catalog_id}.json` - Movie catalog endpoint
+- `GET /config/{config}/catalog/movie/{catalog_id}/search={search}.json` - Movie catalog search endpoint
+- `GET /config/{config}` - Redirect to configure page with existing config
 
 ## 🔒 Security
 
