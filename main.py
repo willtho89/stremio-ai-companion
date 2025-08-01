@@ -8,7 +8,7 @@ import json
 import base64
 import os
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, validator, ValidationError, ConfigDict
+from pydantic import BaseModel, validator, ValidationError, ConfigDict, Field
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -92,6 +92,16 @@ class EncryptionService:
 
 encryption_service = EncryptionService(os.getenv("STREMIO_AI_ENCRYPTION_KEY", "stremio-ai-companion-default-key"))
 
+class MovieSuggestions(BaseModel):
+    """Pydantic model for structured movie suggestions output"""
+    movies: List[str] = Field(description="List of movie titles that match the search query")
+    
+    @validator('movies')
+    def validate_movies(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError('At least one movie suggestion is required')
+        return v
+
 class LLMService:
     def __init__(self, config: Config):
         self.client = openai.OpenAI(
@@ -105,33 +115,62 @@ class LLMService:
 
 Focus on understanding the user's mood, preferences, and context. If they mention themes, genres, time periods, or specific feelings they want to experience, find movies that truly capture those elements.
 
-Return only a JSON array of movie titles, nothing else. Each title should be a real movie that exists and genuinely matches the user's request.
+Each title should be a real movie that exists and genuinely matches the user's request."""
+        
+        try:
+            # Try structured output first
+            try:
+                response = self.client.beta.chat.completions.parse(
+                    model=self.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format=MovieSuggestions,
+                    temperature=0.7,
+                    max_tokens=500,
+                    timeout=30
+                )
+                
+                if response.choices[0].message.parsed:
+                    movies = response.choices[0].message.parsed.movies
+                    return movies[:max_results]
+                else:
+                    # Fall back to refusal handling or regular completion
+                    raise Exception("Structured output parsing failed")
+                    
+            except (AttributeError, openai.BadRequestError) as e:
+                # Model doesn't support structured output, fall back to regular completion
+                print(f"Structured output not supported, falling back to regular completion: {e}")
+                
+                fallback_prompt = f"""{prompt}
+
+Return only a JSON array of movie titles, nothing else.
 Example format: ["Movie Title 1", "Movie Title 2", "Movie Title 3"]
 
 Query: {query}"""
-        
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=500,
-                timeout=30
-            )
-            
-            content = response.choices[0].message.content.strip()
-            
-            if content.startswith('```json'):
-                content = content.replace('```json', '').replace('```', '').strip()
-            elif content.startswith('```'):
-                content = content.replace('```', '').strip()
-            
-            movies = json.loads(content)
-            if isinstance(movies, list) and all(isinstance(movie, str) for movie in movies):
-                return movies[:max_results]
-            else:
-                return [query]
+                
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": fallback_prompt}],
+                    temperature=0.7,
+                    max_tokens=500,
+                    timeout=30
+                )
+                
+                content = response.choices[0].message.content.strip()
+                
+                # Clean up JSON formatting
+                if content.startswith('```json'):
+                    content = content.replace('```json', '').replace('```', '').strip()
+                elif content.startswith('```'):
+                    content = content.replace('```', '').strip()
+                
+                movies = json.loads(content)
+                if isinstance(movies, list) and all(isinstance(movie, str) for movie in movies):
+                    return movies[:max_results]
+                else:
+                    return [query]
+                    
         except json.JSONDecodeError:
+            print(f"JSON decode error, returning fallback")
             return [query]
         except openai.APIError as e:
             print(f"OpenAI API error: {e}")
