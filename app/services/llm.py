@@ -11,7 +11,6 @@ import openai
 
 from app.models.config import Config
 from app.models.movie import MovieSuggestions
-from app.utils.parsing import parse_query_with_year
 
 
 class LLMService:
@@ -46,29 +45,16 @@ class LLMService:
         """
         self.logger.info(f"Generating {max_results} movie suggestions for query: '{query}'")
 
-        # Parse query to extract title and year (for specific movie searches like "twins (1988)")
-        title, year = parse_query_with_year(query)
-        
         # Get current date for context
         current_date = datetime.now().strftime("%B %Y")
 
-        # If year is specified in the query, focus on that specific movie
-        if year:
-            prompt = f"""You are a movie discovery AI companion. Today is {current_date}. The user is searching for the movie "{title}" from {year}.
-
-Return the exact title of this movie as it appears in movie databases, followed by similar movies from around the same time period or with similar themes.
-
-Return each movie title with its release year in parentheses, like "Movie Title (YYYY)".
-
-Generate {max_results} movie titles total, starting with the specific movie requested."""
-        else:
-            prompt = f"""You are a movie discovery AI companion. Today is {current_date}. Generate {max_results} movie titles that perfectly match this search query: "{query}"
+        prompt = f"""You are a movie discovery AI companion. Today is {current_date}. Generate {max_results} movie titles that perfectly match this search query: "{query}"
 
 Focus on understanding the user's mood, preferences, and context. If they mention themes, genres, time periods, or specific feelings they want to experience, find movies that truly capture those elements.
 
 IMPORTANT: Return each movie title with its release year in parentheses, like "Movie Title (YYYY)". This helps with accurate movie identification.
 
-Each title should be a real movie that exists and genuinely matches the user's request."""
+Each title must be a real movie that exists and genuinely matches the user's request."""
 
         try:
             # Try structured output first

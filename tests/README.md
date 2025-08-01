@@ -102,10 +102,10 @@ Example:
 ```python
 import pytest
 from unittest.mock import patch, MagicMock
-from app.utils.parsing import parse_query_with_year
+from app.utils.parsing import parse_movie_with_year
 
-def test_parse_query_with_year():
-    title, year = parse_query_with_year("The Matrix (1999)")
+def test_parse_movie_with_year():
+    title, year = parse_movie_with_year("The Matrix (1999)")
     assert title == "The Matrix"
     assert year == 1999
 ```
