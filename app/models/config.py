@@ -6,6 +6,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
+from app.core.config import settings
+
 
 class Config(BaseModel):
     """
@@ -17,14 +19,29 @@ class Config(BaseModel):
 
     model_config = ConfigDict(protected_namespaces=())
 
-    openai_api_key: str
-    openai_base_url: Optional[str] = "https://openrouter.ai/api/v1"
-    model_name: str = "openrouter/horizon-alpha:online"
-    tmdb_read_access_token: str
+    openai_api_key: str = ""
+    openai_base_url: Optional[str] = None
+    model_name: str = ""
+    tmdb_read_access_token: str = ""
     max_results: int = 20
     include_adult: bool = False
     use_posterdb: bool = False
     posterdb_api_key: Optional[str] = None
+
+    def __init__(self, **data):
+        # Use .env values as defaults if not provided (but not if explicitly set to empty)
+        if "openai_api_key" not in data and settings.OPENAI_API_KEY:
+            data["openai_api_key"] = settings.OPENAI_API_KEY
+        if "openai_base_url" not in data and settings.OPENAI_BASE_URL:
+            data["openai_base_url"] = settings.OPENAI_BASE_URL
+        if "model_name" not in data and settings.DEFAULT_MODEL:
+            data["model_name"] = settings.DEFAULT_MODEL
+        if "tmdb_read_access_token" not in data and settings.TMDB_READ_ACCESS_TOKEN:
+            data["tmdb_read_access_token"] = settings.TMDB_READ_ACCESS_TOKEN
+        if "posterdb_api_key" not in data and settings.RPDB_API_KEY:
+            data["posterdb_api_key"] = settings.RPDB_API_KEY
+
+        super().__init__(**data)
 
     @field_validator("openai_api_key")
     @classmethod

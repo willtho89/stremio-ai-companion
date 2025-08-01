@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import ValidationError
 from starlette.templating import Jinja2Templates
 
+from app.core.config import settings
 from app.core.logging import logger
 from app.models.config import Config
 from app.services.encryption import encryption_service
@@ -43,7 +44,9 @@ async def configure_page(request: Request, config: Optional[str] = Query(None)):
             logger.warning(f"Invalid config provided to configure page: {e}")
             pass
 
-    return templates.TemplateResponse("configure.html", {"request": request, "existing_config": existing_config})
+    return templates.TemplateResponse(
+        "configure.html", {"request": request, "existing_config": existing_config, "settings": settings}
+    )
 
 
 @router.get("/config/{config}/debug")

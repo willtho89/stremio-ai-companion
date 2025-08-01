@@ -151,28 +151,28 @@
             <div class="form-group">
                 <label for="openai_api_key">OpenAI API Key *</label>
                 <input type="password" id="openai_api_key" name="openai_api_key" required 
-                       placeholder="sk-..." value="{% if existing_config %}{{ existing_config.openai_api_key }}{% endif %}">
+                       placeholder="sk-..." value="{% if existing_config %}{{ existing_config.openai_api_key }}{% elif settings.OPENAI_API_KEY %}{{ settings.OPENAI_API_KEY }}{% endif %}">
                 <div class="help-text">Your OpenAI API key for LLM movie suggestions</div>
             </div>
             
             <div class="form-group">
                 <label for="openai_base_url">OpenAI Base URL</label>
                 <input type="url" id="openai_base_url" name="openai_base_url" 
-                       value="{% if existing_config %}{{ existing_config.openai_base_url }}{% else %}https://openrouter.ai/api/v1{% endif %}" placeholder="https://openrouter.ai/api/v1">
+                       value="{% if existing_config %}{{ existing_config.openai_base_url }}{% else %}{{ settings.OPENAI_BASE_URL }}{% endif %}" placeholder="{{ settings.OPENAI_BASE_URL }}">
                 <div class="help-text">Use custom endpoint for OpenAI-compatible APIs</div>
             </div>
             
             <div class="form-group">
                 <label for="model_name">Model Name</label>
                 <input type="text" id="model_name" name="model_name" 
-                       value="{% if existing_config %}{{ existing_config.model_name }}{% else %}openrouter/horizon-alpha:online{% endif %}" placeholder="openrouter/horizon-alpha:online">
+                       value="{% if existing_config %}{{ existing_config.model_name }}{% else %}{{ settings.DEFAULT_MODEL }}{% endif %}" placeholder="{{ settings.DEFAULT_MODEL }}">
                 <div class="help-text">OpenAI model to use for movie suggestions</div>
             </div>
             
             <div class="form-group">
                 <label for="tmdb_read_access_token">TMDB Read Access Token *</label>
                 <input type="password" id="tmdb_read_access_token" name="tmdb_read_access_token" required 
-                       placeholder="Your TMDB read access token" value="{% if existing_config %}{{ existing_config.tmdb_read_access_token }}{% endif %}">
+                       placeholder="Your TMDB read access token" value="{% if existing_config %}{{ existing_config.tmdb_read_access_token }}{% elif settings.TMDB_READ_ACCESS_TOKEN %}{{ settings.TMDB_READ_ACCESS_TOKEN }}{% endif %}">
                 <div class="help-text">Get your free read access token from <a href="https://www.themoviedb.org/settings/api" target="_blank" style="color: rgba(255,255,255,0.8);">TMDB API Settings</a></div>
             </div>
             
@@ -203,7 +203,7 @@
             <div class="form-group" id="posterdb_key_group" style="{% if existing_config and existing_config.use_posterdb %}display: block;{% else %}display: none;{% endif %}">
                 <label for="posterdb_api_key">RPDB API Key</label>
                 <input type="password" id="posterdb_api_key" name="posterdb_api_key" 
-                       placeholder="Your RPDB API key" value="{% if existing_config and existing_config.posterdb_api_key %}{{ existing_config.posterdb_api_key }}{% endif %}">
+                       placeholder="Your RPDB API key" value="{% if existing_config and existing_config.posterdb_api_key %}{{ existing_config.posterdb_api_key }}{% elif settings.RPDB_API_KEY %}{{ settings.RPDB_API_KEY }}{% endif %}">
                 <div class="help-text">Optional: Enhanced movie posters from <a href="https://ratingposterdb.com" target="_blank" style="color: rgba(255,255,255,0.8);">RPDB</a></div>
             </div>
             
