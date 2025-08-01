@@ -2,7 +2,7 @@
 Tests for the conversion utility functions.
 """
 
-from app.utils.conversion import movie_to_stremio_meta
+from app.utils.conversion import movie_to_stremio_meta, tv_to_stremio_meta
 
 
 class TestMovieToStremioMeta:
@@ -87,6 +87,66 @@ class TestMovieToStremioMeta:
         assert result["id"] == "tmdb:123"
         assert result["type"] == "movie"
         assert result["name"] == "Minimal Movie"
+        assert "poster" not in result
+        assert "background" not in result
+        assert "releaseInfo" not in result
+        assert "imdbRating" not in result
+        assert "genre" not in result
+        assert "runtime" not in result
+
+
+class TestTVToStremioMeta:
+    """Tests for the tv_to_stremio_meta function."""
+
+    def test_with_complete_data(self, sample_tmdb_tv):
+        """Test conversion with complete TV series data."""
+        result = tv_to_stremio_meta(sample_tmdb_tv)
+
+        assert result["id"] == "tmdb:1399"
+        assert result["type"] == "series"
+        assert result["name"] == "Game of Thrones"
+        assert result["poster"] == "https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg"
+        assert result["background"] == "https://image.tmdb.org/t/p/w1280/suopoADq0k8YZr4dQXcU6pToj6s.jpg"
+        assert result["description"] == "Seven noble families fight for control of the mythical land of Westeros."
+        assert result["releaseInfo"] == "2011"
+        assert result["imdbRating"] == 9.3
+        assert result["genre"] == ["Sci-Fi & Fantasy", "Drama", "Action & Adventure"]
+        assert result["runtime"] == "60 min/ep"
+
+    def test_with_custom_poster(self, sample_tmdb_tv):
+        """Test conversion with a custom poster URL."""
+        custom_poster = "https://example.com/custom_poster.jpg"
+        result = tv_to_stremio_meta(sample_tmdb_tv, custom_poster)
+
+        assert result["poster"] == custom_poster
+
+    def test_with_multiple_episode_runtimes(self, sample_tmdb_tv):
+        """Test conversion with multiple episode runtimes."""
+        tv_data = sample_tmdb_tv.copy()
+        tv_data["episode_run_time"] = [45, 60, 75]
+
+        result = tv_to_stremio_meta(tv_data)
+
+        assert result["runtime"] == "60 min/ep"  # Average of 45, 60, 75
+
+    def test_with_missing_episode_runtime(self, sample_tmdb_tv):
+        """Test conversion with missing episode runtime."""
+        tv_data = sample_tmdb_tv.copy()
+        tv_data.pop("episode_run_time")
+
+        result = tv_to_stremio_meta(tv_data)
+
+        assert "runtime" not in result
+
+    def test_with_minimal_data(self):
+        """Test conversion with minimal TV series data."""
+        minimal_tv = {"id": 123, "name": "Minimal Series"}
+
+        result = tv_to_stremio_meta(minimal_tv)
+
+        assert result["id"] == "tmdb:123"
+        assert result["type"] == "series"
+        assert result["name"] == "Minimal Series"
         assert "poster" not in result
         assert "background" not in result
         assert "releaseInfo" not in result

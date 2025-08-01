@@ -13,7 +13,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
 from app.models.config import Config
-from app.models.movie import StremioMeta, MovieSuggestions
+from app.models.movie import StremioMeta, MovieSuggestions, TVSeriesSuggestions
 
 
 @pytest.fixture
@@ -102,3 +102,42 @@ def sample_stremio_meta() -> StremioMeta:
         genre=["Drama", "Thriller"],
         runtime="139 min",
     )
+
+
+@pytest.fixture
+def sample_tv_suggestions() -> TVSeriesSuggestions:
+    """
+    Fixture providing a sample TVSeriesSuggestions object for testing.
+    """
+    return TVSeriesSuggestions(
+        series=[
+            "Game of Thrones (2011)",
+            "Breaking Bad (2008)",
+            "The Sopranos (1999)",
+            "The Wire (2002)",
+            "Stranger Things (2016)",
+        ]
+    )
+
+
+@pytest.fixture
+def sample_tmdb_tv() -> Dict[str, Any]:
+    """
+    Fixture providing a sample TMDB TV series data for testing.
+    """
+    return {
+        "id": 1399,
+        "name": "Game of Thrones",
+        "overview": "Seven noble families fight for control of the mythical land of Westeros.",
+        "first_air_date": "2011-04-17",
+        "poster_path": "/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg",
+        "backdrop_path": "/suopoADq0k8YZr4dQXcU6pToj6s.jpg",
+        "vote_average": 9.3,
+        "genres": [
+            {"id": 10765, "name": "Sci-Fi & Fantasy"},
+            {"id": 18, "name": "Drama"},
+            {"id": 10759, "name": "Action & Adventure"},
+        ],
+        "episode_run_time": [60],
+        "external_ids": {"imdb_id": "tt0944947"},
+    }

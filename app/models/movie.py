@@ -1,5 +1,5 @@
 """
-Movie-related models for the Stremio AI Companion application.
+Movie and TV series related models for the Stremio AI Companion application.
 """
 
 from typing import List, Optional
@@ -25,12 +25,30 @@ class MovieSuggestions(BaseModel):
         return v
 
 
+class TVSeriesSuggestions(BaseModel):
+    """
+    Pydantic model for structured TV series suggestions output from LLM.
+
+    This model is used to parse the structured output from the OpenAI API
+    when generating TV series suggestions.
+    """
+
+    series: List[str] = Field(description="List of TV series titles that match the search query")
+
+    @field_validator("series")
+    @classmethod
+    def validate_series(cls, v):
+        if not v or len(v) == 0:
+            raise ValueError("At least one TV series suggestion is required")
+        return v
+
+
 class StremioMeta(BaseModel):
     """
     Pydantic model for Stremio metadata format.
 
     This model represents the metadata format expected by Stremio
-    for movie entries in the catalog.
+    for movie and TV series entries in the catalog.
     """
 
     id: str

@@ -170,7 +170,7 @@
             border-radius: 8px;
             display: none;
         }
-        .movie-item {
+        .content-item {
             background: rgba(255,255,255,0.1);
             padding: 0.75rem;
             border-radius: 8px;
@@ -178,22 +178,77 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+            position: relative;
         }
-        .movie-poster {
+        .content-poster {
             width: 40px;
             height: 60px;
             background: rgba(255,255,255,0.2);
             border-radius: 4px;
             flex-shrink: 0;
         }
-        .movie-info h4 {
+        .content-info h4 {
             margin: 0 0 0.25rem 0;
             font-size: 0.9rem;
         }
-        .movie-info p {
+        .content-info p {
             margin: 0;
             font-size: 0.8rem;
             opacity: 0.7;
+        }
+        .content-type-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .content-type-badge.movie {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+        }
+        .content-type-badge.series {
+            background: rgba(33, 150, 243, 0.3);
+            border: 1px solid rgba(33, 150, 243, 0.5);
+        }
+        .results-summary {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .results-summary h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+        }
+        .count-badges {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .count-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .count-badge.movies {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        .count-badge.series {
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid rgba(33, 150, 243, 0.3);
         }
     </style>
 </head>
@@ -265,8 +320,8 @@
             <button class="test-btn" onclick="testSearch()">Test Search</button>
             
             <div class="test-results" id="testResults">
-                <h4>Search Results:</h4>
-                <div id="movieResults"></div>
+                <div id="resultsSummary"></div>
+                <div id="contentResults"></div>
             </div>
         </div>
     </div>
@@ -301,36 +356,85 @@
             
             const btn = document.querySelector('.test-btn');
             const results = document.getElementById('testResults');
-            const movieResults = document.getElementById('movieResults');
+            const resultsSummary = document.getElementById('resultsSummary');
+            const contentResults = document.getElementById('contentResults');
             
             btn.disabled = true;
             btn.textContent = 'Searching...';
             results.style.display = 'block';
-            movieResults.innerHTML = '<p>Loading...</p>';
+            resultsSummary.innerHTML = '';
+            contentResults.innerHTML = '<p>Loading...</p>';
             
             try {
                 // Extract config from current path: /config/{config}/preview
                 const pathParts = window.location.pathname.split('/');
                 const config = pathParts[2]; // config is the 3rd part (index 2)
                 
-                const response = await fetch(`/config/${encodeURIComponent(config)}/catalog/movie/ai_companion.json?search=${encodeURIComponent(query)}`);
-                const data = await response.json();
+                // Search both movies and series catalogs
+                const [movieResponse, seriesResponse] = await Promise.all([
+                    fetch(`/config/${encodeURIComponent(config)}/catalog/movie/ai_companion_movie.json?search=${encodeURIComponent(query)}`).catch(() => null),
+                    fetch(`/config/${encodeURIComponent(config)}/catalog/series/ai_companion_series.json?search=${encodeURIComponent(query)}`).catch(() => null)
+                ]);
                 
-                if (data.metas && data.metas.length > 0) {
-                    movieResults.innerHTML = data.metas.map(movie => `
-                        <div class="movie-item">
-                            <img class="movie-poster" src="${movie.poster || ''}" alt="${movie.name}" onerror="this.style.display='none'">
-                            <div class="movie-info">
-                                <h4>${movie.name}</h4>
-                                <p>${movie.releaseInfo || 'Unknown year'} • ${movie.imdbRating ? movie.imdbRating.toFixed(1) + '/10' : 'No rating'}</p>
+                let allMetas = [];
+                let movieCount = 0;
+                let seriesCount = 0;
+                
+                // Process movie results
+                if (movieResponse && movieResponse.ok) {
+                    const movieData = await movieResponse.json();
+                    if (movieData.metas && movieData.metas.length > 0) {
+                        allMetas.push(...movieData.metas);
+                        movieCount = movieData.metas.length;
+                    }
+                }
+                
+                // Process series results
+                if (seriesResponse && seriesResponse.ok) {
+                    const seriesData = await seriesResponse.json();
+                    if (seriesData.metas && seriesData.metas.length > 0) {
+                        allMetas.push(...seriesData.metas);
+                        seriesCount = seriesData.metas.length;
+                    }
+                }
+                
+                if (allMetas.length > 0) {
+                    // Show summary
+                    const totalCount = movieCount + seriesCount;
+                    resultsSummary.innerHTML = `
+                        <div class="results-summary">
+                            <h4>Found ${totalCount} result${totalCount !== 1 ? 's' : ''}</h4>
+                            <div class="count-badges">
+                                ${movieCount > 0 ? `<div class="count-badge movies">🎬 ${movieCount} Movie${movieCount !== 1 ? 's' : ''}</div>` : ''}
+                                ${seriesCount > 0 ? `<div class="count-badge series">📺 ${seriesCount} Series</div>` : ''}
                             </div>
                         </div>
-                    `).join('');
+                    `;
+                    
+                    // Show results
+                    contentResults.innerHTML = allMetas.map(item => {
+                        const typeClass = item.type === 'series' ? 'series' : 'movie';
+                        const typeIcon = item.type === 'series' ? '📺' : '🎬';
+                        const typeLabel = item.type === 'series' ? 'Series' : 'Movie';
+                        
+                        return `
+                            <div class="content-item">
+                                <img class="content-poster" src="${item.poster || ''}" alt="${item.name}" onerror="this.style.display='none'">
+                                <div class="content-info">
+                                    <h4>${item.name}</h4>
+                                    <p>${item.releaseInfo || 'Unknown year'} • ${item.imdbRating ? item.imdbRating.toFixed(1) + '/10' : 'No rating'}</p>
+                                </div>
+                                <div class="content-type-badge ${typeClass}">${typeIcon} ${typeLabel}</div>
+                            </div>
+                        `;
+                    }).join('');
                 } else {
-                    movieResults.innerHTML = '<p>No results found. Try a different search query.</p>';
+                    resultsSummary.innerHTML = '';
+                    contentResults.innerHTML = '<p>No results found. Try a different search query.</p>';
                 }
             } catch (error) {
-                movieResults.innerHTML = `<p>Error: ${error.message}</p>`;
+                resultsSummary.innerHTML = '';
+                contentResults.innerHTML = `<p>Error: ${error.message}</p>`;
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Test Search';
