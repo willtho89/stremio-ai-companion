@@ -4,6 +4,7 @@ LLM service for the Stremio AI Companion application.
 
 import json
 import logging
+from datetime import datetime
 from typing import List
 
 import openai
@@ -47,10 +48,13 @@ class LLMService:
 
         # Parse query to extract title and year (for specific movie searches like "twins (1988)")
         title, year = parse_query_with_year(query)
+        
+        # Get current date for context
+        current_date = datetime.now().strftime("%B %Y")
 
         # If year is specified in the query, focus on that specific movie
         if year:
-            prompt = f"""You are a movie discovery AI companion. The user is searching for the movie "{title}" from {year}.
+            prompt = f"""You are a movie discovery AI companion. Today is {current_date}. The user is searching for the movie "{title}" from {year}.
 
 Return the exact title of this movie as it appears in movie databases, followed by similar movies from around the same time period or with similar themes.
 
@@ -58,7 +62,7 @@ Return each movie title with its release year in parentheses, like "Movie Title 
 
 Generate {max_results} movie titles total, starting with the specific movie requested."""
         else:
-            prompt = f"""You are a movie discovery AI companion. Generate {max_results} movie titles that perfectly match this search query: "{query}"
+            prompt = f"""You are a movie discovery AI companion. Today is {current_date}. Generate {max_results} movie titles that perfectly match this search query: "{query}"
 
 Focus on understanding the user's mood, preferences, and context. If they mention themes, genres, time periods, or specific feelings they want to experience, find movies that truly capture those elements.
 
