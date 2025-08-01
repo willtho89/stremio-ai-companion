@@ -237,5 +237,3 @@ class TestStremioRouter:
         assert "Invalid config" in str(exc_info.value)
         mock_encryption_service.decrypt.assert_called_once_with("invalid_config")
         mock_llm_service.generate_movie_suggestions.assert_not_called()
-
-

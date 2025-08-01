@@ -19,14 +19,14 @@ from app.services.encryption import encryption_service
 def get_request_scheme(request: Request) -> str:
     """
     Determine the correct scheme (http or https) based on request headers.
-    
+
     This handles cases where the application is behind a proxy (like in Docker)
     that might forward requests internally using HTTP even if the original request
     was HTTPS.
-    
+
     Args:
         request: The FastAPI request object
-        
+
     Returns:
         The correct scheme (http or https)
     """
@@ -34,16 +34,17 @@ def get_request_scheme(request: Request) -> str:
     forwarded_proto = request.headers.get("X-Forwarded-Proto")
     if forwarded_proto:
         return forwarded_proto
-        
+
     # Check Forwarded header (RFC 7239)
     forwarded = request.headers.get("Forwarded")
     if forwarded:
         for part in forwarded.split(";"):
             if part.strip().startswith("proto="):
                 return part.strip()[6:]
-                
+
     # Fall back to the request's scheme
     return request.url.scheme
+
 
 router = APIRouter(tags=["Web UI"])
 templates = Jinja2Templates(directory="templates")

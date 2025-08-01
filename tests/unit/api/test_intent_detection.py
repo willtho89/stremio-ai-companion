@@ -70,7 +70,7 @@ class TestIntentDetection:
         """Test queries that mention both movies and series."""
         mixed_queries = [
             "movies and tv shows about sci-fi",
-            "films and series recommendations", 
+            "films and series recommendations",
             "movie or tv show about crime",
         ]
 

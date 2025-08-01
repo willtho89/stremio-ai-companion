@@ -75,9 +75,11 @@ def _detect_user_intent(search: str) -> Optional[str]:
     for pattern in series_patterns:
         if pattern == r"\bshows?\b":
             # Special handling for "shows" - exclude if preceded by movie words or in non-TV context
-            if re.search(r"\bshows?\b", search_lower) and not re.search(
-                r"\b(?:movie|film|cinema)\s+shows?\b", search_lower
-            ) and not re.search(r"\bshow\s+me\b", search_lower):
+            if (
+                re.search(r"\bshows?\b", search_lower)
+                and not re.search(r"\b(?:movie|film|cinema)\s+shows?\b", search_lower)
+                and not re.search(r"\bshow\s+me\b", search_lower)
+            ):
                 series_matches += 1
         else:
             if re.search(pattern, search_lower):
