@@ -55,7 +55,7 @@ class TestLLMService:
             # Verify the API was called correctly
             mock_client.beta.chat.completions.parse.assert_called_once()
             args, kwargs = mock_client.beta.chat.completions.parse.call_args
-            assert kwargs["model"] == "gpt-4.1-mini"
+            assert kwargs["model"] == "openrouter/horizon-alpha:online"
             assert kwargs["temperature"] == 0.7
             assert kwargs["max_tokens"] == 500
             assert kwargs["timeout"] == 30

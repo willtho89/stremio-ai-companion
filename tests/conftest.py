@@ -23,8 +23,8 @@ def sample_config() -> Config:
     """
     return Config(
         openai_api_key="sk-test123456789012345678901234567890",
-        openai_base_url="https://api.openai.com/v1",
-        model_name="gpt-4.1-mini",
+        openai_base_url="https://openrouter.ai/api/v1",
+        model_name="openrouter/horizon-alpha:online",
         tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
         max_results=20,
         include_adult=False,
@@ -40,8 +40,8 @@ def sample_config_with_posterdb() -> Config:
     """
     return Config(
         openai_api_key="sk-test123456789012345678901234567890",
-        openai_base_url="https://api.openai.com/v1",
-        model_name="gpt-4.1-mini",
+        openai_base_url="https://openrouter.ai/api/v1",
+        model_name="openrouter/horizon-alpha:online",
         tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
         max_results=20,
         include_adult=False,

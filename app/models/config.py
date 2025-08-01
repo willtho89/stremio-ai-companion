@@ -18,8 +18,8 @@ class Config(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
     openai_api_key: str
-    openai_base_url: Optional[str] = "https://api.openai.com/v1"
-    model_name: str = "gpt-4.1-mini"
+    openai_base_url: Optional[str] = "https://openrouter.ai/api/v1"
+    model_name: str = "openrouter/horizon-alpha:online"
     tmdb_read_access_token: str
     max_results: int = 20
     include_adult: bool = False

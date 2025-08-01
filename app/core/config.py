@@ -29,8 +29,8 @@ class Settings(BaseModel):
 
     # API settings
     OPENAI_API_KEY: str = ""
-    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
-    DEFAULT_MODEL: str = "gpt-4.1-mini"
+    OPENAI_BASE_URL: str = "https://openrouter.ai/api/v1"
+    DEFAULT_MODEL: str = "openrouter/horizon-alpha:online"
 
     # TMDB settings
     TMDB_READ_ACCESS_TOKEN: str = ""

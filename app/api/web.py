@@ -98,8 +98,8 @@ async def preview_page(request: Request, config: str):
 async def save_config(
     request: Request,
     openai_api_key: str = Form(...),
-    openai_base_url: str = Form("https://api.openai.com/v1"),
-    model_name: str = Form("gpt-4.1-mini"),
+    openai_base_url: str = Form("https://openrouter.ai/api/v1"),
+    model_name: str = Form("openrouter/horizon-alpha:online"),
     tmdb_read_access_token: str = Form(...),
     max_results: int = Form(20),
     include_adult: Optional[str] = Form(None),
