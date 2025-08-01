@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [0.1.1]
 
+### Added
+- Catalog View
+  - Show 50 Recommendations from LLM
+  - New env MAX_CATALOG_RESULTS
+
+### Fixed
+- Install to app
 
 ## [0.1.0]
 
