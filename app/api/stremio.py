@@ -16,6 +16,7 @@ from app.services.rpdb import RPDBService
 from app.services.tmdb import TMDBService
 from app.utils.conversion import movie_to_stremio_meta
 from app.utils.parsing import parse_movie_with_year
+from core.config import settings
 
 router = APIRouter(tags=["Stremio API"])
 
@@ -34,7 +35,7 @@ async def get_manifest(config: str):
 
         return {
             "id": "ai.companion.stremio",
-            "version": "0.0.1",
+            "version": settings.APP_VERSION,
             "name": "AI Companion",
             "description": "Your AI-powered movie discovery companion",
             "logo": "https://raw.githubusercontent.com/willtho89/stremio-ai-companion/refs/heads/main/.assets/logo2_256.png",
