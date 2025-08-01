@@ -15,6 +15,36 @@ from app.core.logging import logger
 from app.models.config import Config
 from app.services.encryption import encryption_service
 
+
+def get_request_scheme(request: Request) -> str:
+    """
+    Determine the correct scheme (http or https) based on request headers.
+    
+    This handles cases where the application is behind a proxy (like in Docker)
+    that might forward requests internally using HTTP even if the original request
+    was HTTPS.
+    
+    Args:
+        request: The FastAPI request object
+        
+    Returns:
+        The correct scheme (http or https)
+    """
+    # Check X-Forwarded-Proto header (common in proxy setups)
+    forwarded_proto = request.headers.get("X-Forwarded-Proto")
+    if forwarded_proto:
+        return forwarded_proto
+        
+    # Check Forwarded header (RFC 7239)
+    forwarded = request.headers.get("Forwarded")
+    if forwarded:
+        for part in forwarded.split(";"):
+            if part.strip().startswith("proto="):
+                return part.strip()[6:]
+                
+    # Fall back to the request's scheme
+    return request.url.scheme
+
 router = APIRouter(tags=["Web UI"])
 templates = Jinja2Templates(directory="templates")
 
@@ -57,7 +87,8 @@ async def preview_page(request: Request, config: str):
     try:
         config_data = encryption_service.decrypt(config)
         config_obj = Config.model_validate(json.loads(config_data))
-        manifest_url = f"{request.url.scheme}://{request.url.netloc}/config/{config}/manifest.json"
+        scheme = get_request_scheme(request)
+        manifest_url = f"{scheme}://{request.url.netloc}/config/{config}/manifest.json"
         return templates.TemplateResponse(
             "preview.html", {"request": request, "manifest_url": manifest_url, "config": config_obj}
         )
@@ -107,13 +138,14 @@ async def save_config(
         )
 
         encrypted_config = encryption_service.encrypt(config.model_dump_json())
-        manifest_url = f"{request.url.scheme}://{request.url.netloc}/config/{encrypted_config}/manifest.json"
+        scheme = get_request_scheme(request)
+        manifest_url = f"{scheme}://{request.url.netloc}/config/{encrypted_config}/manifest.json"
 
         return JSONResponse(
             {
                 "success": True,
                 "manifest_url": manifest_url,
-                "preview_url": f"{request.url.scheme}://{request.url.netloc}/config/{encrypted_config}/preview",
+                "preview_url": f"{scheme}://{request.url.netloc}/config/{encrypted_config}/preview",
             }
         )
     except ValidationError as e:
