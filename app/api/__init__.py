@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
+from starlette.staticfiles import StaticFiles
 
 from app.api.stremio import router as stremio_router
 from app.api.web import router as web_router
@@ -28,6 +29,8 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+app.mount("/static", StaticFiles(directory="./.assets"), name="static")
 
 
 # Add request logging middleware

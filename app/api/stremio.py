@@ -227,6 +227,7 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
         "name": name,
         "description": description,
         "logo": "https://raw.githubusercontent.com/willtho89/stremio-ai-companion/refs/heads/main/.assets/logo2_256.png",
+        "background": "https://raw.githubusercontent.com/willtho89/stremio-ai-companion/refs/heads/main/.assets/background.png",
         "resources": ["catalog"],
         "types": types,
         "catalogs": catalogs,
