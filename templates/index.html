@@ -104,13 +104,16 @@
                 try {
                     const urlObj = new URL(url);
                     
-                    // Extract config from path-based format: /config/{config}/manifest.json
-                    const pathMatch = urlObj.pathname.match(/\/config\/([^\/]+)\/manifest\.json$/);
+                    // Extract config from path-based formats:
+                    // - /config/{config}/manifest.json (combined)
+                    // - /config/{config}/movie/manifest.json (movie)
+                    // - /config/{config}/series/manifest.json (series)
+                    const pathMatch = urlObj.pathname.match(/\/config\/([^\/]+)(?:\/(?:movie|series))?\/manifest\.json$/);
                     if (pathMatch) {
                         const config = pathMatch[1];
                         window.location.href = `/configure?config=${encodeURIComponent(config)}`;
                     } else {
-                        alert('No config found in the URL. Please use the format: https://yourserver.com/config/your-config/manifest.json');
+                        alert('No config found in the URL. Please use one of: /config/{config}/manifest.json, /config/{config}/movie/manifest.json, or /config/{config}/series/manifest.json');
                     }
                 } catch (e) {
                     alert('Invalid URL format');
