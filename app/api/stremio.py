@@ -54,30 +54,29 @@ def timed_lru_cache(seconds: int, maxsize: int = 128):
     return wrapper_cache
 
 
-async def _process_movie_metadata_pipeline(tmdb_service, rpdb_service, movie_titles: list, include_adult: bool):
-    """Process movie metadata pipeline that runs independently after LLM suggestions."""
+async def _process_metadata_pipeline(
+    tmdb_service, rpdb_service, titles: list, include_adult: bool, *, search_fn, details_fn, meta_builder
+):
+    """Generic metadata pipeline that runs after LLM suggestions."""
     try:
-        # Step 1: Search TMDB for all movies in parallel
         search_tasks = []
-        for movie_title in movie_titles:
-            title, movie_year = parse_movie_with_year(movie_title)
-            search_tasks.append(tmdb_service.search_movie(title, movie_year, include_adult))
+        for title_in in titles:
+            title, year = parse_movie_with_year(title_in)
+            search_tasks.append(search_fn(title, year, include_adult))
 
         search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-        logger.info(f"Completed {len(search_results)} TMDB movie searches")
+        logger.info(f"Completed {len(search_results)} TMDB searches")
 
-        # Step 2: Get movie details for valid results in parallel
         detail_tasks = []
         valid_search_results = []
         for result in search_results:
             if isinstance(result, dict) and result:
-                detail_tasks.append(tmdb_service.get_movie_details(result["id"]))
+                detail_tasks.append(details_fn(result["id"]))
                 valid_search_results.append(result)
 
         detail_results = await asyncio.gather(*detail_tasks, return_exceptions=True)
-        logger.info(f"Completed {len(detail_results)} movie detail fetches")
+        logger.info(f"Completed {len(detail_results)} detail fetches")
 
-        # Step 3: Get poster URLs in parallel
         poster_tasks = []
         valid_details = []
         for detail in detail_results:
@@ -94,79 +93,20 @@ async def _process_movie_metadata_pipeline(tmdb_service, rpdb_service, movie_tit
 
         poster_results = await asyncio.gather(*poster_tasks, return_exceptions=True) if poster_tasks else []
 
-        # Step 4: Build final metadata
-        movie_metas = []
-        for i, movie_details in enumerate(valid_details):
+        metas = []
+        for i, details in enumerate(valid_details):
             poster_url = None
             if i < len(poster_results) and isinstance(poster_results[i], str):
                 poster_url = poster_results[i]
 
-            meta = movie_to_stremio_meta(movie_details, poster_url)
-            movie_metas.append(meta)
+            meta = meta_builder(details, poster_url)
+            metas.append(meta)
 
-        logger.debug(f"Movie metadata pipeline completed with {len(movie_metas)} results")
-        return movie_metas
-
-    except Exception as e:
-        logger.error(f"Movie metadata pipeline failed: {e}")
-        return []
-
-
-async def _process_series_metadata_pipeline(tmdb_service, rpdb_service, series_titles: list, include_adult: bool):
-    """Process TV series metadata pipeline that runs independently after LLM suggestions."""
-    try:
-        # Step 1: Search TMDB for all series in parallel
-        search_tasks = []
-        for series_title in series_titles:
-            title, series_year = parse_movie_with_year(series_title)
-            search_tasks.append(tmdb_service.search_tv(title, series_year, include_adult))
-
-        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-        logger.info(f"Completed {len(search_results)} TMDB TV series searches")
-
-        # Step 2: Get series details for valid results in parallel
-        detail_tasks = []
-        valid_search_results = []
-        for result in search_results:
-            if isinstance(result, dict) and result:
-                detail_tasks.append(tmdb_service.get_tv_details(result["id"]))
-                valid_search_results.append(result)
-
-        detail_results = await asyncio.gather(*detail_tasks, return_exceptions=True)
-        logger.info(f"Completed {len(detail_results)} TV series detail fetches")
-
-        # Step 3: Get poster URLs in parallel
-        poster_tasks = []
-        valid_details = []
-        for detail in detail_results:
-            if isinstance(detail, dict) and detail:
-                valid_details.append(detail)
-                if rpdb_service:
-                    imdb_id = detail.get("external_ids", {}).get("imdb_id")
-                    if imdb_id:
-                        poster_tasks.append(rpdb_service.get_poster(imdb_id))
-                    else:
-                        poster_tasks.append(asyncio.create_task(asyncio.sleep(0, result=None)))
-                else:
-                    poster_tasks.append(asyncio.create_task(asyncio.sleep(0, result=None)))
-
-        poster_results = await asyncio.gather(*poster_tasks, return_exceptions=True) if poster_tasks else []
-
-        # Step 4: Build final metadata
-        series_metas = []
-        for i, series_details in enumerate(valid_details):
-            poster_url = None
-            if i < len(poster_results) and isinstance(poster_results[i], str):
-                poster_url = poster_results[i]
-
-            meta = tv_to_stremio_meta(series_details, poster_url)
-            series_metas.append(meta)
-
-        logger.debug(f"TV series metadata pipeline completed with {len(series_metas)} results")
-        return series_metas
+        logger.debug(f"Metadata pipeline completed with {len(metas)} results")
+        return metas
 
     except Exception as e:
-        logger.error(f"TV series metadata pipeline failed: {e}")
+        logger.error(f"Metadata pipeline failed: {e}")
         return []
 
 
@@ -326,16 +266,28 @@ async def _process_catalog_request(config: str, search: str, content_type: Conte
         if content_type == ContentType.MOVIE:
             movie_titles = await llm_service.generate_movie_suggestions(search, max_results)
             logger.info(f"Generated {len(movie_titles)} movie suggestions: {movie_titles}")
-            movie_metas = await _process_movie_metadata_pipeline(
-                tmdb_service, rpdb_service, movie_titles, config_obj.include_adult
+            movie_metas = await _process_metadata_pipeline(
+                tmdb_service,
+                rpdb_service,
+                movie_titles,
+                config_obj.include_adult,
+                search_fn=tmdb_service.search_movie,
+                details_fn=tmdb_service.get_movie_details,
+                meta_builder=movie_to_stremio_meta,
             )
             logger.info(f"Returning {len(movie_metas)} movie metadata entries")
             return {"metas": movie_metas}
         else:  # content_type == ContentType.SERIES
             series_titles = await llm_service.generate_tv_suggestions(search, max_results)
             logger.info(f"Generated {len(series_titles)} TV series suggestions: {series_titles}")
-            series_metas = await _process_series_metadata_pipeline(
-                tmdb_service, rpdb_service, series_titles, config_obj.include_adult
+            series_metas = await _process_metadata_pipeline(
+                tmdb_service,
+                rpdb_service,
+                series_titles,
+                config_obj.include_adult,
+                search_fn=tmdb_service.search_tv,
+                details_fn=tmdb_service.get_tv_details,
+                meta_builder=tv_to_stremio_meta,
             )
             logger.info(f"Returning {len(series_metas)} series metadata entries")
             return {"metas": series_metas}

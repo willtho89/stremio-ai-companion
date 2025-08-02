@@ -5,209 +5,184 @@ LLM service for the Stremio AI Companion application.
 import json
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Type, Tuple, Iterable
 
 import openai
+from openai.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam
+from pydantic import BaseModel
 
 from app.models.config import Config
+from app.models.enums import ContentType
 from app.models.movie import MovieSuggestions, TVSeriesSuggestions
+
+MESSAGE_TYPE = Iterable[ChatCompletionSystemMessageParam | ChatCompletionUserMessageParam,]
 
 
 class LLMService:
     """
     Service for generating movie suggestions using OpenAI's LLM.
-
-    This service handles communication with the OpenAI API to generate
-    movie suggestions based on user queries.
     """
 
     def __init__(self, config: Config):
-        """
-        Initialize the LLM service with configuration.
-
-        Args:
-            config: Configuration object with OpenAI settings
-        """
         self.client = openai.AsyncOpenAI(api_key=config.openai_api_key, base_url=config.openai_base_url)
         self.model = config.model_name
         self.logger = logging.getLogger("stremio_ai_companion.LLMService")
+        self._default_timeout = 30
+        self._default_temperature = 0.7
+        self._default_max_tokens = 5000
 
-    async def generate_movie_suggestions(self, query: str, max_results: int) -> List[str]:
+    @property
+    def _current_date(self) -> str:
+        return datetime.now().strftime("%B %Y")
+
+    def _build_messages(self, query: str, max_results: int, content_type: ContentType) -> MESSAGE_TYPE:
         """
-        Generate movie suggestions based on a user query.
+        Build the messages for the API call.
 
         Args:
-            query: The user's search query
-            max_results: Maximum number of movie suggestions to return
+            query: User search query
+            max_results: Maximum number of results to return
+            content_type: Type of content (movie or series)
 
         Returns:
-            List of movie titles with years
+            A list of messages for the OpenAI API.
         """
-        self.logger.debug(f"Generating {max_results} movie suggestions for query: '{query}'")
+        base_instructions = {
+            ContentType.MOVIE: {
+                "companion_type": "movie discovery AI companion",
+                "content_name": "movie",
+                "content_plural": "movies",
+                "date_description": "release year",
+                "example_format": "Movie Title (YYYY)",
+            },
+            ContentType.SERIES: {
+                "companion_type": "TV series discovery AI companion",
+                "content_name": "TV series",
+                "content_plural": "TV series",
+                "date_description": "first air year",
+                "example_format": "Series Title (YYYY)",
+            },
+        }
+        instructions = base_instructions[content_type]
 
-        # Get current date for context
-        current_date = datetime.now().strftime("%B %Y")
+        # This prompt is now simplified. It focuses on the *task* because
+        # the Structured Output feature handles the schema formatting.
+        system_prompt = f"""You are a {instructions['companion_type']}. Today is {self._current_date}.
+Your task is to generate {instructions['content_name']} titles that perfectly match the user's search query.
 
-        prompt = f"""You are a movie discovery AI companion. Today is {current_date}. Generate {max_results} movie titles that perfectly match this search query: "{query}"
+Focus on understanding the user's mood, preferences, and context. If they mention themes, genres, time periods, or specific feelings, find {instructions['content_plural']} that truly capture those elements.
+If you can use web search, rely on classical media, letterboxd, TMDB, Trakt for recommendations.
 
-Focus on understanding the user's mood, preferences, and context. If they mention themes, genres, time periods, or specific feelings they want to experience, find movies that truly capture those elements.
+IMPORTANT: Each suggested title string MUST include its {instructions['date_description']} in parentheses, like "{instructions['example_format']}". This is critical for accurate identification."""
 
-IMPORTANT: Return each movie title with its release year in parentheses, like "Movie Title (YYYY)". This helps with accurate movie identification.
+        user_prompt = f"""Generate {max_results} {instructions['content_plural']} for the query: "{query}"."""
 
-Each title must be a real movie that exists and genuinely matches the user's request."""
+        return [
+            ChatCompletionSystemMessageParam(role="system", content=system_prompt),
+            ChatCompletionUserMessageParam(role="user", content=user_prompt),
+        ]
+
+    def _get_response_config(self, content_type: ContentType) -> Tuple[Type[BaseModel], str]:
+        config_map = {
+            ContentType.MOVIE: (MovieSuggestions, "movies"),
+            ContentType.SERIES: (TVSeriesSuggestions, "series"),
+        }
+        return config_map[content_type]
+
+    async def _try_structured_completion(
+        self, messages: MESSAGE_TYPE, response_model: Type[BaseModel], field_name: str, max_results: int
+    ) -> List[str]:
+        """
+        Attempt to get structured completion from OpenAI using .parse().
+        This is OpenAI's recommended approach for reliable, schema-enforced output.
+        """
+        self.logger.debug(f"Attempting Structured Output with model '{self.model}'")
+        # The .parse() method directly uses the pydantic model to enforce the output structure.
+        # This is more reliable than JSON mode.
+        response = await self.client.chat.completions.parse(
+            model=self.model,
+            messages=messages,
+            response_format=response_model,
+            temperature=self._default_temperature,
+            max_tokens=self._default_max_tokens,
+            timeout=self._default_timeout,
+        )
+
+        parsed_object = response.choices[0].message.parsed
+        if not parsed_object:
+            raise ValueError("Structured output parsing returned a null object.")
+
+        items = getattr(parsed_object, field_name)
+        self.logger.debug(f"Successfully parsed {len(items)} items using Structured Output.")
+        return items[:max_results]
+
+    async def _try_fallback_completion(
+        self, messages: MESSAGE_TYPE, response_model: Type[BaseModel], field_name: str, max_results: int
+    ) -> List[str]:
+        """
+        Attempt fallback using JSON Mode. This is for models that may not
+        support the more advanced Structured Outputs feature.
+        """
+        self.logger.warning("Falling back to JSON Mode.")
+
+        # Add a final instruction to the messages to strongly request JSON.
+        messages_with_fallback = messages + [
+            {
+                "role": "system",
+                "content": f"You must respond with a valid JSON object that conforms to this schema: {json.dumps(response_model.model_json_schema())}",
+            }
+        ]
+
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=messages_with_fallback,
+            response_format={"type": "json_object"},
+            temperature=self._default_temperature,
+            max_tokens=self._default_max_tokens,
+            timeout=self._default_timeout,
+        )
+
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("Fallback completion returned empty content.")
+
+        # Manually parse and validate the JSON with Pydantic
+        parsed_data = response_model.model_validate_json(content)
+        items = getattr(parsed_data, field_name)
+
+        self.logger.debug(f"Successfully parsed {len(items)} items from fallback completion.")
+        return items[:max_results]
+
+    async def _generate_suggestions(self, query: str, max_results: int, *, content_type: ContentType) -> List[str]:
+        """
+        Generate content suggestions, prioritizing Structured Outputs and then
+        falling back to JSON mode if necessary.
+        """
+        self.logger.debug(f"Generating {max_results} {content_type.value} suggestions for query: '{query}'")
+
+        messages = self._build_messages(query, max_results, content_type)
+        response_model, field_name = self._get_response_config(content_type)
 
         try:
-            # Try structured output first
+            # First, try the best-practice method. Your original instinct was correct.
+            return await self._try_structured_completion(messages, response_model, field_name, max_results)
+        except (openai.BadRequestError, AttributeError) as e:
+            # This block gracefully handles cases where the model/endpoint does not support
+            # the .parse() method or structured outputs. For example, some older models
+            # or proxy servers might not support it. It's often indicated by a BadRequestError.
+            self.logger.warning(f"Structured Output (.parse) failed: {e}. Attempting fallback.")
             try:
-                response = await self.client.chat.completions.parse(
-                    model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    response_format=MovieSuggestions,
-                    temperature=0.7,
-                    max_tokens=5000,
-                    timeout=30,
-                )
-
-                if response.choices[0].message.parsed:
-                    movies = response.choices[0].message.parsed.movies
-                    self.logger.debug(f"Successfully parsed {len(movies)} movies using structured output")
-                    return movies[:max_results]
-                else:
-                    # Fall back to refusal handling or regular completion
-                    self.logger.warning("Structured output parsing failed, falling back to regular completion")
-                    raise Exception("Structured output parsing failed")
-
-            except (AttributeError, openai.BadRequestError) as e:
-                # Model doesn't support structured output, fall back to regular completion
-                self.logger.warning(f"Structured output not supported, falling back to regular completion: {e}")
-
-                fallback_prompt = f"""{prompt}
-
-Return only a JSON array of movie titles, nothing else.
-Example format: ["Movie Title 1", "Movie Title 2", "Movie Title 3"]
-
-Query: {query}"""
-
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": fallback_prompt}],
-                    temperature=0.7,
-                    max_tokens=5000,
-                    timeout=30,
-                )
-
-                content = response.choices[0].message.content.strip()
-
-                # Clean up JSON formatting
-                if content.startswith("```json"):
-                    content = content.replace("```json", "").replace("```", "").strip()
-                elif content.startswith("```"):
-                    content = content.replace("```", "").strip()
-
-                movies = json.loads(content)
-                if isinstance(movies, list) and all(isinstance(movie, str) for movie in movies):
-                    self.logger.debug(f"Successfully parsed {len(movies)} movies from fallback completion")
-                    return movies[:max_results]
-                else:
-                    self.logger.warning("Invalid movie list format from LLM, returning query as fallback")
-                    return [query]
-
-        except json.JSONDecodeError as e:
-            self.logger.error(f"JSON decode error: {e}, returning fallback")
-            return [query]
-        except openai.APIError as e:
-            self.logger.error(f"OpenAI API error: {e}")
-            return [query]
+                return await self._try_fallback_completion(messages, response_model, field_name, max_results)
+            except Exception as fallback_e:
+                self.logger.error(f"Fallback completion also failed: {fallback_e}")
+                return [query]  # Final fallback
         except Exception as e:
-            self.logger.error(f"LLM service error: {e}")
+            self.logger.error(f"An unexpected LLM service error occurred: {e}")
             return [query]
+
+    # ... The rest of your class is perfect and does not need changes.
+    async def generate_movie_suggestions(self, query: str, max_results: int) -> List[str]:
+        return await self._generate_suggestions(query, max_results, content_type=ContentType.MOVIE)
 
     async def generate_tv_suggestions(self, query: str, max_results: int) -> List[str]:
-        """
-        Generate TV series suggestions based on a user query.
-
-        Args:
-            query: The user's search query
-            max_results: Maximum number of TV series suggestions to return
-
-        Returns:
-            List of TV series titles with years
-        """
-        self.logger.debug(f"Generating {max_results} TV series suggestions for query: '{query}'")
-
-        # Get current date for context
-        current_date = datetime.now().strftime("%B %Y")
-
-        prompt = f"""You are a TV series discovery AI companion. Today is {current_date}. Generate {max_results} TV series titles that perfectly match this search query: "{query}"
-
-Focus on understanding the user's mood, preferences, and context. If they mention themes, genres, time periods, or specific feelings they want to experience, find TV series that truly capture those elements.
-
-IMPORTANT: Return each TV series title with its first air year in parentheses, like "Series Title (YYYY)". This helps with accurate series identification.
-
-Each title must be a real TV series that exists and genuinely matches the user's request."""
-
-        try:
-            # Try structured output first
-            try:
-                response = await self.client.chat.completions.parse(
-                    model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    response_format=TVSeriesSuggestions,
-                    temperature=0.7,
-                    max_tokens=5000,
-                    timeout=30,
-                )
-
-                if response.choices[0].message.parsed:
-                    series = response.choices[0].message.parsed.series
-                    self.logger.debug(f"Successfully parsed {len(series)} TV series using structured output")
-                    return series[:max_results]
-                else:
-                    # Fall back to refusal handling or regular completion
-                    self.logger.warning("Structured output parsing failed, falling back to regular completion")
-                    raise Exception("Structured output parsing failed")
-
-            except (AttributeError, openai.BadRequestError) as e:
-                # Model doesn't support structured output, fall back to regular completion
-                self.logger.warning(f"Structured output not supported, falling back to regular completion: {e}")
-
-                fallback_prompt = f"""{prompt}
-
-Return only a JSON array of TV series titles, nothing else.
-Example format: ["Series Title 1", "Series Title 2", "Series Title 3"]
-
-Query: {query}"""
-
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": fallback_prompt}],
-                    temperature=0.7,
-                    max_tokens=5000,
-                    timeout=30,
-                )
-
-                content = response.choices[0].message.content.strip()
-
-                # Clean up JSON formatting
-                if content.startswith("```json"):
-                    content = content.replace("```json", "").replace("```", "").strip()
-                elif content.startswith("```"):
-                    content = content.replace("```", "").strip()
-
-                series = json.loads(content)
-                if isinstance(series, list) and all(isinstance(show, str) for show in series):
-                    self.logger.debug(f"Successfully parsed {len(series)} TV series from fallback completion")
-                    return series[:max_results]
-                else:
-                    self.logger.warning("Invalid TV series list format from LLM, returning query as fallback")
-                    return [query]
-
-        except json.JSONDecodeError as e:
-            self.logger.error(f"JSON decode error: {e}, returning fallback")
-            return [query]
-        except openai.APIError as e:
-            self.logger.error(f"OpenAI API error: {e}")
-            return [query]
-        except Exception as e:
-            self.logger.error(f"LLM service error: {e}")
-            return [query]
+        return await self._generate_suggestions(query, max_results, content_type=ContentType.SERIES)
