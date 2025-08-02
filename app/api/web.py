@@ -55,7 +55,7 @@ async def homepage(request: Request):
     """
     Render the homepage with application description and configuration options.
     """
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {"request": request, "settings": settings})
 
 
 @router.get("/configure", response_class=HTMLResponse)
@@ -105,6 +105,7 @@ async def preview_page(request: Request, config: str):
                 "manifest_url": manifest_urls["combined"],  # Keep backward compatibility
                 "manifest_urls": manifest_urls,
                 "config": config_obj,
+                "settings": settings,
             },
         )
     except json.JSONDecodeError as e:

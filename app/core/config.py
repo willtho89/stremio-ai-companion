@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     Application settings loaded from environment variables.
     """
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", env_prefix="")
 
     # Application settings
     APP_NAME: str = Field(default="Stremio AI Companion")
@@ -49,11 +49,14 @@ class Settings(BaseSettings):
     # Manifest settings
     SPLIT_MANIFESTS: bool = Field(default=False, description="Enable split manifests for movie/series types")
 
+    # Customizing
+    FOOTER_ENABLED: bool = Field(default=True, description="Show footer on pages")
 
 class TestSettings(Settings):
     """
     Test-specific settings that don't load from .env file.
     """
+    FOOTER_ENABLED: bool = Field(default=True)
 
     model_config = SettingsConfigDict(extra="ignore")
 
