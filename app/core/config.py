@@ -52,10 +52,12 @@ class Settings(BaseSettings):
     # Customizing
     FOOTER_ENABLED: bool = Field(default=True, description="Show footer on pages")
 
+
 class TestSettings(Settings):
     """
     Test-specific settings that don't load from .env file.
     """
+
     FOOTER_ENABLED: bool = Field(default=True)
 
     model_config = SettingsConfigDict(extra="ignore")

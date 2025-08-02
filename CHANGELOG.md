@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2]
+
+### Added
+- Background image and footer in UI
+
+### Changed
+- GitHub Actions workflow updates
+- Default LLM model set to horizon-beta
+- Improved manifest splitting handling and config extraction
+- Better error handling on decryption failures
+
+## [0.2.1]
+- Github Action push…
+
 ## [0.2.0]
 
 ### Added

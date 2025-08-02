@@ -4,6 +4,7 @@ from app.api import app
 
 client = TestClient(app)
 
+
 def test_footer_visible_by_default(monkeypatch):
     response = client.get("/")
     assert response.status_code == 200

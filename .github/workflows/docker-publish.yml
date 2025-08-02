@@ -50,9 +50,6 @@ jobs:
       with:
         fetch-depth: 0
 
-
-
-
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -66,22 +63,14 @@ jobs:
     - name: Read app version
       id: app_version
       run: |
-        python - <<'PY'
+        echo "version=$(python - <<'PY'
         from pathlib import Path
         import re
         init = Path('app/__init__.py').read_text()
-        m = re.search(r'__version__\s*=\s*"([^"]+)"', init)
-        print(f"version={m.group(1) if m else '0.0.0'}")
+        m = re.search(r'__version__\s*=\s*\"([^\"]+)\"', init)
+        print(m.group(1) if m else '0.0.0')
         PY
-        
-        echo "version=$(python - <<'PY'
-from pathlib import Path
-import re
-init = Path('app/__init__.py').read_text()
-m = re.search(r'__version__\s*=\s*\"([^\"]+)\"', init)
-print(m.group(1) if m else '0.0.0')
-PY
-)" >> $GITHUB_OUTPUT
+        )" >> $GITHUB_OUTPUT
 
     - name: Extract metadata
       id: meta
