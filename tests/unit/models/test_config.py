@@ -16,7 +16,7 @@ class TestConfig:
         config = Config(
             openai_api_key="sk-test123456789012345678901234567890",
             openai_base_url="https://openrouter.ai/api/v1",
-            model_name="openrouter/horizon-alpha:online",
+            model_name="openrouter/horizon-beta:online",
             tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
             max_results=20,
             include_adult=False,
@@ -26,7 +26,7 @@ class TestConfig:
 
         assert config.openai_api_key == "sk-test123456789012345678901234567890"
         assert config.openai_base_url == "https://openrouter.ai/api/v1"
-        assert config.model_name == "openrouter/horizon-alpha:online"
+        assert config.model_name == "openrouter/horizon-beta:online"
         assert config.tmdb_read_access_token == "eyJhbGciOiJIUzI1NiJ9.test1234567890"
         assert config.max_results == 20
         assert config.include_adult is False
@@ -41,7 +41,7 @@ class TestConfig:
         )
 
         assert config.openai_base_url == "https://openrouter.ai/api/v1"
-        assert config.model_name == "openrouter/horizon-alpha:online"
+        assert config.model_name == "openrouter/horizon-beta:online"
         assert config.max_results == 20
         assert config.include_adult is False
         assert config.use_posterdb is False
