@@ -1,18 +1,23 @@
 # Stremio AI Companion
 
-🎬 **Your AI-powered movie discovery companion for Stremio** - Find the perfect movies to watch with intelligent recommendations and curated collections (coming soon).
+🎬 Your AI-powered movie and tv series discovery companion for Stremio — powered by advanced natural language understanding using OpenAI compatible APIs. Discover perfect films using intelligent recommendations and (soon) AI-curated collections.
 
-![Stremio AI Companion Demo](.assets/stremio-ai-companion.gif)
+![Demo Screenshot](.assets/stremio-ai-companion.gif)
+
+---
 
 ## ✨ Features
 
-- **AI Movie Discovery**: Find movies using natural language - "sci-fi movies about time travel" or "feel-good comedies from the 90s"
-- **Smart Recommendations**: AI understands context and mood to suggest perfect matches
-- **Rich Movie Data**: Complete information from TMDB with optional enhanced artwork from RPDB
-- **Performance**: Normal requests (without caching) typically complete in just 5-6 seconds, providing quick and responsive movie discovery ⚡
-- **Curated Collections**: AI-generated movie collections based on themes, moods, and genres (coming soon)
-- **Privacy First**: No database required - your preferences encrypted in shareable URLs
-- **Seamless Integration**: Works natively within Stremio as a catalog addon
+- 🧠 Natural language movie search: e.g. “feel-good sci-fi from the 90s”
+- 🎯 Smart AI recommendations based on mood and context
+- 🎨 Detailed movie data from TMDB + optional enhanced artwork from RPDB
+- ⚡ Fast response time — typically 5–6 seconds per query
+- 🔐 100% privacy-first: encrypted, stateless config via shareable URLs
+- 🎞️ Split manifest support: Movies, Series, or both (toggleable)
+- 🧺 Curated Collections (coming soon): AI-crafted picks by theme, mood, genre
+- 🧩 Native Stremio support: works as a catalog addon
+
+---
 
 ## 🚀 Quick Start
 
@@ -24,197 +29,184 @@ pip install -r requirements.txt
 
 ### 2. Get API Keys
 
-- **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/account/api-keys)
-- **TMDB API Key**: Get from [TMDB API Documentation](https://developer.themoviedb.org/docs) (register for an API key from your account settings)
-- **RPDB API Key** (optional): Get from [RatingPosterDB](https://ratingposterdb.com/)
+- 🔑 AI Provider Key (choose one):
+  - [OpenAI](https://platform.openai.com/account/api-keys)
+  - [OpenRouter](https://openrouter.ai/keys) — supports 400+ models incl. Claude, Gemini, GPT-4
+- 🎬 TMDB API Key — [Create free key](https://developer.themoviedb.org/docs)
+- 🖼️ RPDB API Key (optional) — [Sign up](https://ratingposterdb.com/)
 
 ### 3. Run the Server
 
 ```bash
 python main.py
-```
-
-Or with uvicorn:
-
-```bash
+# or with uvicorn:
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-### 4. Configure Your AI Companion
+### 4. Configure Your Companion
 
-1. Open http://localhost:8000 in your browser
+1. Visit http://localhost:8000
 2. Click "Configure Your AI Companion"
-3. Enter your API keys and preferences
+3. Enter API keys and preferences
 4. Copy the generated manifest URL
-5. Add the manifest URL to Stremio as a new addon
+5. Paste it into Stremio as a new addon
 
-### 🔄 Reconfiguring Your Addon
+---
 
-To edit an existing configuration:
+## 🧠 How It Works
 
-1. **From Homepage**: Paste your manifest URL in the "Already have a config?" section
-2. **From Preview Page**: Click the "✏️ Edit Configuration" button
-3. **Direct URL**: Visit `/reconfigure?config=YOUR_ENCRYPTED_CONFIG`
+1. Describe what you want to watch.
+2. AI understands your request, extracts intent.
+3. Suggests clever matches using natural language & GPT-style models.
+4. Movie data enriched with TMDB.
+5. Beautiful artwork (optional) via RPDB.
 
-Your existing settings will be pre-filled in the form for easy editing.
+Examples:
 
-## 🏗️ Architecture
+- “films like Inception and The Matrix”
+- “lighthearted rom-coms from Europe”
+- “space horror set on abandoned ships”
+- “Oscar wins for best cinematography”
 
-```
-┌─────────────────┐    ┌──────────────┐    ┌─────────────┐
-│   Stremio App   │───▶│  FastAPI     │───▶│   OpenAI    │
-│                 │    │  Server      │    │   LLM API   │
-└─────────────────┘    └──────────────┘    └─────────────┘
-                              │
-                              ▼
-                       ┌──────────────┐    ┌─────────────┐
-                       │   Parallel   │───▶│   TMDB API  │
-                       │   Fetching   │    │             │
-                       └──────────────┘    └─────────────┘
-                              │
-                              ▼
-                       ┌──────────────┐    ┌─────────────┐
-                       │   Optional   │───▶│    RPDB     │
-                       │   Artwork    │    │   API       │
-                       └──────────────┘    └─────────────┘
-```
-
-## 🛠️ API Endpoints
-
-- `GET /` - Homepage with project description
-- `GET /configure` - Configuration form interface
-- `GET /configure?config=...` - Edit existing encrypted configuration (pre-filled form)
-- `POST /save-config` - Save and encrypt configuration
-- `GET /config/{config}/preview` - Preview addon configuration
-- `GET /config/{config}/manifest.json` - Stremio manifest endpoint (combined movies + series)
-- `GET /config/{config}/movie/manifest.json` - Dedicated movies-only manifest endpoint
-- `GET /config/{config}/series/manifest.json` - Dedicated series-only manifest endpoint
-- `GET /config/{config}/catalog/movie/{catalog_id}.json` - Movie catalog endpoint (combined addon)
-- `GET /config/{config}/catalog/movie/{catalog_id}/search={search}.json` - Movie catalog search endpoint (combined addon)
-- `GET /config/{config}/catalog/series/{catalog_id}.json` - Series catalog endpoint (combined addon)
-- `GET /config/{config}/catalog/series/{catalog_id}/search={search}.json` - Series catalog search endpoint (combined addon)
-- `GET /config/{config}/movie/catalog/movie/{catalog_id}.json` - Movie catalog endpoint (movies-only addon)
-- `GET /config/{config}/movie/catalog/movie/{catalog_id}/search={search}.json` - Movie catalog search endpoint (movies-only addon)
-- `GET /config/{config}/series/catalog/series/{catalog_id}.json` - Series catalog endpoint (series-only addon)
-- `GET /config/{config}/series/catalog/series/{catalog_id}/search={search}.json` - Series catalog search endpoint (series-only addon)
-- `GET /config/{config}` - Redirect to configure page with existing config
-
-## 🎭 Split Manifest Support (v0.2.0+)
-
-You can now install separate addons for movies and series, or use the combined addon:
-
-### Installation Options
-
-1. **Combined Addon** (default): Install both movies and series in one addon
-   - Use: `/config/{config}/manifest.json`
-
-2. **Movies Only**: Install a dedicated movies-only addon
-   - Use: `/config/{config}/movie/manifest.json`
-
-3. **Series Only**: Install a dedicated series-only addon
-   - Use: `/config/{config}/series/manifest.json`
-
-### Benefits
-
-- **Cleaner Stremio Interface**: Separate addons appear as distinct entries
-- **Focused Discovery**: Search only movies or only series when you know what you want
-- **Backward Compatibility**: Existing installations continue to work unchanged
-
-The preview page includes a dropdown to select your preferred addon type and generates the appropriate manifest URL.
-
-## 🔒 Security
-
-Configuration data is encrypted using AES-256 with PBKDF2 key derivation and stored in URL parameters. This ensures:
-
-- No server-side storage required
-- Portable configuration URLs
-- Secure transmission of API keys
-- User privacy protection
+---
 
 ## 🌐 Deployment
 
-### Docker
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-EXPOSE 8000
-
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-### Environment Variables
-
-You can optionally set a custom encryption password:
+### Docker (Simple Run)
 
 ```bash
-export STREMIO_AI_ENCRYPTION_KEY="your-custom-encryption-key"
+docker build -t stremio-ai-companion .
+docker run -d \
+  -p 8000:8000 \
+  -e ENCRYPTION_KEY="your-strong-key" \
+  ghcr.io/willtho89/stremio-ai-companion:latest
 ```
 
-## 🎬 How to Use Your AI Companion
+### Docker Compose (Recommended)
 
-### Natural Language Movie Discovery
+```bash
+docker compose up -d
+```
 
-- "sci-fi movies about time travel and parallel universes"
-- "feel-good romantic comedies from the 90s"
-- "intense action movies with car chases"
-- "atmospheric horror films set in space"
-- "mind-bending movies like Inception"
-- "cozy movies for a rainy Sunday"
+Customize with a .env file:
+```env
+ENCRYPTION_KEY=replace-this-key
+OPENAI_API_KEY=your-openai-key
+TMDB_API_KEY=your-tmdb-key
+RPDB_API_KEY=optional
+```
 
-### How It Works
+---
 
-1. **Describe what you want** in Stremio using natural language
-2. **AI understands your mood** and suggests perfect movie matches
-3. **Rich metadata** fetched from TMDB with detailed information
-4. **Enhanced artwork** (optional) from RPDB for beautiful posters
-5. **Fast results** displayed in your Stremio catalog
+## ⚙️ Environment Variables
 
-### Coming Soon: Curated Collections
-- **Themed Collections**: "Best Movies for Date Night", "Hidden Sci-Fi Gems"
-- **Mood-Based Lists**: "Movies to Cheer You Up", "Thought-Provoking Dramas"
-- **Personalized Recommendations**: Collections tailored to your viewing history
+| Variable               | Description                                | Default                          |
+|------------------------|--------------------------------------------|----------------------------------|
+| ENCRYPTION_KEY         | AES-256 encryption key (required)          | —                                |
+| OPENAI_API_KEY         | OpenAI or OpenRouter key                   | —                                |
+| OPENAI_BASE_URL        | AI model gateway URL                       | https://openrouter.ai/api/v1     |
+| DEFAULT_MODEL          | e.g. openrouter/horizon-beta:online        | openrouter/horizon-beta:online   |
+| TMDB_API_KEY           | TMDB token                                 | —                                |
+| RPDB_API_KEY           | RPDB artwork key (optional)                | —                                |
+| MAX_CATALOG_RESULTS    | Search result cap                          | 50                               |
+| SPLIT_MANIFESTS        | Enable movies-only/series-only manifests   | false                            |
+| FOOTER_ENABLED         | Show footer in web interfaces              | true                             |
+| HOST                   | Server bind host                           | 0.0.0.0                          |
+| PORT                   | Server port                                | 8000                             |
+| UVICORN_WORKERS        | Uvicorn worker count (0 = auto)            | 0                                |
+
+---
+
+## 📡 Stremio Manifest URLs
+
+- 🔗 Default combined:  
+  `/config/{CONFIG}/manifest.json`
+- 🎬 Movies only:  
+  `/config/{CONFIG}/movie/manifest.json`
+- 📺 Series only:  
+  `/config/{CONFIG}/series/manifest.json`
+
+Use the preview dropdown to copy them.
+
+---
+
+## 🛠️ API Endpoints
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET    | /                      | Home + description |
+| GET    | /configure             | New configuration form |
+| GET    | /configure?config=... | Edit encrypted URL |
+| POST   | /save-config           | Returns a manifest URL |
+| GET    | /config/.../preview    | Human preview of config |
+| GET    | /config/.../manifest.json | Combined manifest |
+| GET    | /config/.../movie/manifest.json | Movies-only manifest |
+| GET    | /config/.../series/manifest.json | Series-only manifest |
+| GET    | /config/.../catalog/... | Stremio catalog entries |
+| GET    | /config/.../catalog/.../search=... | Catalog search queries |
+
+---
+
+## 🔐 Security & Config Storage
+
+- AES-256 GCM encryption + PBKDF2
+- Configuration embedded in URL — no server-side storage
+- Your API keys stay local and never stored
+
+---
+
+## 🎭 Split Manifest Support
+
+Available from v0.2.0+. Flexible manifest structure:
+
+- 🧩 Use a single addon or split into:
+  - Movies-only addon
+  - Series-only addon
+  - Combined one
+
+👍 Great for power users who want focused discovery or cleaner interfaces.
+
+---
 
 ## 🧪 Testing
 
-The project includes comprehensive unit and integration tests to ensure reliability and maintainability.
-
-### Running Tests
-
 ```bash
-# Install development and test dependencies
 pip install -r requirements-dev.txt
-
-# Run all tests
 pytest
-
-# Generate test coverage report
-pytest --cov=app
+pytest --cov=app  # with coverage report
 ```
 
-For more detailed information about testing, see the [tests/README.md](tests/README.md) file.
+See [tests/README.md](tests/README.md) for more.
+
+---
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly (run the test suite with `pytest`)
-5. Submit a pull request
+Contributions welcome — follow the standard GitHub workflow!
+
+1. Fork 📌
+2. Create a new feature branch 🚧
+3. Make changes and test thoroughly 🧪
+4. Create a pull request 🔄
+
+Please ensure test coverage for new features.
+
+---
 
 ## 📄 License
 
-MIT License - see LICENSE file for details
+MIT — See [LICENSE](LICENSE)
+
+---
 
 ## 🙏 Acknowledgments
 
-- [Stremio](https://www.stremio.com/) for the amazing platform
-- [TMDB](https://www.themoviedb.org/) for movie metadata
-- [RatingPosterDB](https://ratingposterdb.com/) for enhanced artwork
-- [OpenAI](https://openai.com/) for LLM capabilities
-- [OpenCode](https://opencode.ai) for great Coding Agent (this project is completely vibe coded ;-)
+- [Stremio](https://www.stremio.com/) — media discovery reimagined
+- [TMDB](https://themoviedb.org) — open movie metadata platform
+- [OpenRouter](https://openrouter.ai) — model routing + GPT ecosystem
+- [RatingPosterDB](https://ratingposterdb.com/) — gorgeous cinematic posters
+- [OpenAI](https://openai.com/) — large language models
+- [standard-readme](https://github.com/RichardLitt/standard-readme) — best practices for READMEs [github.com](https://github.com)
+- [makeareadme.com](https://www.makeareadme.com/) — more docs advice and layout tips
+
+---
