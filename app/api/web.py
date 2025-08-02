@@ -73,7 +73,7 @@ async def configure_page(request: Request, config: Optional[str] = Query(None)):
         except Exception as e:
             # If config is invalid, just show empty form
             logger.warning(f"Invalid config provided to configure page: {e}")
-            pass
+            raise
 
     return templates.TemplateResponse(
         "configure.html", {"request": request, "existing_config": existing_config, "settings": settings}
