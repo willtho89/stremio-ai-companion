@@ -50,26 +50,8 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Bump version and push tag
-      id: tag_version
-      uses: mathieudutour/github-tag-action@v6.1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        default_bump: patch
-        tag_prefix: v
 
-    - name: Update version files
-      run: |
-        NEW_VERSION="${{ steps.tag_version.outputs.new_version }}"
-        sed -i "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" app/__init__.py
 
-    - name: Commit version file changes
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add app/__init__.py app/api/__init__.py
-        git diff --staged --quiet || git commit -m "Update version files to ${{ steps.tag_version.outputs.new_version }}"
-        git push
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -81,22 +63,40 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Read app version
+      id: app_version
+      run: |
+        python - <<'PY'
+        from pathlib import Path
+        import re
+        init = Path('app/__init__.py').read_text()
+        m = re.search(r'__version__\s*=\s*"([^"]+)"', init)
+        print(f"version={m.group(1) if m else '0.0.0'}")
+        PY
+        
+        echo "version=$(python - <<'PY'
+from pathlib import Path
+import re
+init = Path('app/__init__.py').read_text()
+m = re.search(r'__version__\s*=\s*\"([^\"]+)\"', init)
+print(m.group(1) if m else '0.0.0')
+PY
+)" >> $GITHUB_OUTPUT
+
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
+          type=raw,value=${{ steps.app_version.outputs.version }}
+          type=raw,value=latest,enable={{is_default_branch}}
           type=ref,event=branch
           type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=semver,pattern={{major}}
           type=sha
-          type=raw,value=latest,enable={{is_default_branch}}
-          type=raw,value=${{ steps.tag_version.outputs.new_tag }}
 
     - name: Build and push Docker image
+      id: build_push
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -106,3 +106,13 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+    - name: Create and push git tag
+      if: ${{ success() }}
+      run: |
+        VERSION="${{ steps.app_version.outputs.version }}"
+        TAG="v${VERSION}"
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git tag "$TAG"
+        git push origin "$TAG"
