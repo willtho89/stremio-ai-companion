@@ -302,8 +302,10 @@
             <p>Try a search query to see how your addon will work:</p>
             <input type="text" class="test-input" id="testQuery" placeholder="e.g., 'sci-fi movies about time travel' or 'romantic comedies from the 90s'">
             <button class="test-btn" onclick="testSearch()">Test Search</button>
+            <div id="timingHint" style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem; display:none;">Timing metrics shown below</div>
             
             <div class="test-results" id="testResults">
+                <div id="timingResults" style="margin-bottom: 0.75rem;"></div>
                 <div id="resultsSummary"></div>
                 <div id="contentResults"></div>
             </div>
@@ -328,6 +330,8 @@
             
             const btn = document.querySelector('.test-btn');
             const results = document.getElementById('testResults');
+            const timingResults = document.getElementById('timingResults');
+            const timingHint = document.getElementById('timingHint');
             const resultsSummary = document.getElementById('resultsSummary');
             const contentResults = document.getElementById('contentResults');
             
@@ -347,24 +351,32 @@
                 let movieResponse = null;
                 let seriesResponse = null;
                 
+                const totalStart = performance.now();
                 if (manifestType === 'combined') {
                     // Search both catalogs using combined addon endpoints
+                    const movieStart = performance.now();
+                    const seriesStart = performance.now();
                     [movieResponse, seriesResponse] = await Promise.all([
                         fetch(`/config/${encodeURIComponent(config)}/catalog/movie/local_companion_stremio_movie/search=${encodeURIComponent(query)}.json`).catch(() => null),
                         fetch(`/config/${encodeURIComponent(config)}/catalog/series/local_companion_stremio_series/search=${encodeURIComponent(query)}.json`).catch(() => null)
                     ]);
                 } else if (manifestType === 'movie') {
                     // Search only movie catalog using movie-specific endpoint
+                    const movieStart = performance.now();
                     movieResponse = await fetch(`/config/${encodeURIComponent(config)}/movie/catalog/movie/local_companion_stremio_movie/search=${encodeURIComponent(query)}.json`).catch(() => null);
+                    var movieEnd = performance.now();
                 } else if (manifestType === 'series') {
                     // Search only series catalog using series-specific endpoint
+                    const seriesStart = performance.now();
                     seriesResponse = await fetch(`/config/${encodeURIComponent(config)}/series/catalog/series/local_companion_stremio_series/search=${encodeURIComponent(query)}.json`).catch(() => null);
+                    var seriesEnd = performance.now();
                 }
                 
                 let allMetas = [];
                 let movieCount = 0;
                 let seriesCount = 0;
                 
+                const totalEnd = performance.now();
                 // Process movie results
                 if (movieResponse && movieResponse.ok) {
                     const movieData = await movieResponse.json();
@@ -383,12 +395,26 @@
                     }
                 }
                 
+                const timings = [];
+                if (typeof movieStart !== 'undefined') {
+                    const mEnd = typeof movieEnd !== 'undefined' ? movieEnd : performance.now();
+                    timings.push({ label: 'Movies request', ms: mEnd - movieStart });
+                }
+                if (typeof seriesStart !== 'undefined') {
+                    const sEnd = typeof seriesEnd !== 'undefined' ? seriesEnd : performance.now();
+                    timings.push({ label: 'Series request', ms: sEnd - seriesStart });
+                }
+
+                if (timings.length) {
+                    timingHint.style.display = 'block';
+                    timingResults.innerHTML = `<div class="results-summary"><div class="count-badges">${timings.filter(t => t.label !== 'Total').map(t => `<div class=\"count-badge\">⏱️ ${t.label}: ${t.ms.toFixed(0)} ms</div>`).join('')}</div></div>`;
+                }
                 if (allMetas.length > 0) {
                     // Show summary
                     const totalCount = movieCount + seriesCount;
                     resultsSummary.innerHTML = `
                         <div class="results-summary">
-                            <h4>Found ${totalCount} result${totalCount !== 1 ? 's' : ''}</h4>
+                            <h4>Found ${totalCount} result${totalCount !== 1 ? 's' : ''} in ${(((totalEnd - totalStart)/1000)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s</h4>
                             <div class="count-badges">
                                 ${movieCount > 0 ? `<div class="count-badge movies">🎬 ${movieCount} Movie${movieCount !== 1 ? 's' : ''}</div>` : ''}
                                 ${seriesCount > 0 ? `<div class="count-badge series">📺 ${seriesCount} Series</div>` : ''}
@@ -414,8 +440,9 @@
                         `;
                     }).join('');
                 } else {
-                    resultsSummary.innerHTML = '';
-                    contentResults.innerHTML = '<p>No results found. Try a different search query.</p>';
+            resultsSummary.innerHTML = '';
+            timingResults.innerHTML = '';
+            timingHint.style.display = 'none';                    contentResults.innerHTML = '<p>No results found. Try a different search query.</p>';
                 }
             } catch (error) {
                 resultsSummary.innerHTML = '';
