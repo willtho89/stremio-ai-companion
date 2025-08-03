@@ -38,7 +38,20 @@ app.mount("/static", StaticFiles(directory="./.assets"), name="static")
 async def log_requests(request: Request, call_next):
     """Log all incoming requests and their responses."""
     start_time = datetime.now()
-    logger.info(f"{request.method} {request.url} - Headers: {dict(request.headers)}")
+    url_str = str(request.url)
+    if "/config/" in url_str:
+        base, rest = url_str.split("/config/", 1)
+        # mask up to the next '/'
+        masked = rest
+        if "/" in rest:
+            token, tail = rest.split("/", 1)
+            # also handle base64 padding marker '==' cases inside token
+            token = token.split("==", 1)[0]
+            masked = f"****/{tail}"
+        safe_url = f"{base}/config/{masked}"
+    else:
+        safe_url = url_str
+    logger.info(f"{request.method} {safe_url} - Headers: {dict(request.headers)}")
     response = await call_next(request)
     duration = datetime.now() - start_time
     logger.info(f"Response: {response.status_code} - Duration: {duration.total_seconds()}s")
