@@ -19,7 +19,7 @@ from app import __version__
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cache = CACHE_INSTANCE
-    if cache.is_redis():
+    if cache.is_redis:
         try:
             await cache._redis.ping()  # type: ignore
             logger.info("Connected to Redis on startup")

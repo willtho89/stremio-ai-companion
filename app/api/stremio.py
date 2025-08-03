@@ -327,7 +327,7 @@ async def _cached_catalog(config: str, content_type: ContentType, catalog_id: st
     prompt = CATALOG_PROMPTS.get(catalog_id, CATALOG_PROMPTS["trending"])["prompt"]
 
     # Pagination only works with Redis cache
-    if not cache.is_redis():
+    if not cache.is_redis:
         if skip > 0:
             # For non-Redis cache, return empty results for pagination requests
             logger.info("Pagination not supported with LRU cache, returning empty results")
