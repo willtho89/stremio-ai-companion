@@ -371,9 +371,8 @@ async def _cached_catalog(
 
     # Check if we have enough entries to satisfy the request
     total_entries = len(cached_entries["metas"])
-    required_entries = adjusted_skip + settings.MAX_CATALOG_RESULTS
 
-    if total_entries >= required_entries:
+    if adjusted_skip < total_entries and total_entries > max(settings.MAX_CATALOG_RESULTS / 4, 30):
         # Return existing entries from cache
         end_index = min(adjusted_skip + settings.MAX_CATALOG_RESULTS, total_entries)
         result_metas = cached_entries["metas"][adjusted_skip:end_index]
