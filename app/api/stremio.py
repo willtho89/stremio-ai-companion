@@ -77,7 +77,7 @@ async def _process_metadata_pipeline(
                 valid_search_results.append(result)
 
         detail_results = await asyncio.gather(*detail_tasks, return_exceptions=True)
-        logger.info(f"Completed {len(detail_results)} detail fetches")
+        logger(f"Completed {len(detail_results)} detail fetches")
 
         poster_tasks = []
         valid_details = []
@@ -281,7 +281,7 @@ async def _process_catalog_request(
 
         # If user intent conflicts with endpoint type, return empty list
         if user_intent and user_intent != content_type:
-            logger.info(
+            logger.debug(
                 f"User intent '{user_intent}' conflicts with endpoint type '{content_type}', returning empty list"
             )
             return {"metas": []}
@@ -344,7 +344,7 @@ async def _cached_catalog(
     if not cache.is_redis:
         if skip > 0:
             # For non-Redis cache, return empty results for pagination requests
-            logger.info("Pagination not supported with LRU cache, returning empty results")
+            logger.debug("Pagination not supported with LRU cache, returning empty results")
             return {"metas": []}
 
         # Fall back to original behavior for skip=0
@@ -352,7 +352,7 @@ async def _cached_catalog(
         if cached is not None:
             logger.info(f"Cache hit for key={key}")
             result_names = [meta.get("name", "Unknown") for meta in cached["metas"]]
-            logger.info(f"LRU Cache: Returning {len(cached['metas'])} cached items for skip={skip}: {result_names}")
+            logger.debug(f"LRU Cache: Returning {len(cached['metas'])} cached items for skip={skip}: {result_names}")
             return cached
         logger.info(f"Cache miss for key={key}")
         result = await _process_catalog_request(
@@ -364,7 +364,7 @@ async def _cached_catalog(
         )
         await cache.aset(key, result, catalog_ttl)
         result_names = [meta.get("name", "Unknown") for meta in result["metas"]]
-        logger.info(f"LRU Cache: Returning {len(result['metas'])} items for skip={skip}: {result_names}")
+        logger.debug(f"LRU Cache: Returning {len(result['metas'])} items for skip={skip}: {result_names}")
         return result
 
     # Get existing cached entries
@@ -386,7 +386,7 @@ async def _cached_catalog(
         # Return existing entries from cache
         result_metas = cached_entries["metas"]
         result_names = [meta.get("name", "Unknown") for meta in result_metas]
-        logger.info(
+        logger.debug(
             f"Redis Cache: Returning {len(result_metas)} cached items for skip={skip} (adjusted to {adjusted_skip}): {result_names}"
         )
         return {"metas": result_metas}
@@ -394,7 +394,7 @@ async def _cached_catalog(
     # Need to generate more entries
     if total_entries >= settings.MAX_CATALOG_ENTRIES:
         # Already at max entries, return empty
-        logger.info(f"Max catalog entries ({settings.MAX_CATALOG_ENTRIES}) reached for {catalog_id}")
+        logger.debug(f"Max catalog entries ({settings.MAX_CATALOG_ENTRIES}) reached for {catalog_id}")
         return {"metas": cached_entries["metas"]}
 
     # Generate new entries, avoiding duplicates
@@ -438,7 +438,7 @@ async def _cached_catalog(
 
     # Hacky: Always return the newly generated items to save LLM compute time
     result_names = [meta.get("name", "Unknown") for meta in new_metas]
-    logger.info(f"Redis Cache: Returning {len(new_metas)} NEW items for skip={skip}: {result_names}")
+    logger.debug(f"Redis Cache: Returning {len(new_metas)} NEW items for skip={skip}: {result_names}")
     return {"metas": new_metas}
 
 

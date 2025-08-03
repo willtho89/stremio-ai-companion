@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.5]
+
+### Changed
+- Reduce log verbosity: demote noisy INFO logs to DEBUG in API and services; keep critical warnings/errors. Improves ops signal-to-noise.
+
 ## [0.3.4]
 
 ### Fixed

@@ -68,7 +68,7 @@ async def log_requests(request: Request, call_next):
         safe_url = f"{base}/config/{masked}"
     else:
         safe_url = url_str
-    logger.info(f"{request.method} {safe_url} - Headers: {dict(request.headers)}")
+    logger.debug(f"{request.method} {safe_url} - Headers: {dict(request.headers)}")
     response = await call_next(request)
     duration = datetime.now() - start_time
     logger.info(f"Response: {response.status_code} - Duration: {duration.total_seconds()}s")
