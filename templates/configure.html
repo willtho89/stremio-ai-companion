@@ -203,7 +203,7 @@
             
             <div class="form-group">
                 <div class="checkbox-group">
-                    <input type="checkbox" id="include_adult" name="include_adult" {% if existing_config and existing_config.include_adult %}checked{% endif %}>
+                    <input type="checkbox" id="include_adult" name="include_adult" {% if adult_flag %}checked{% endif %}>
                     <label for="include_adult">Include adult content in search results</label>
                 </div>
                 <div class="help-text">Allow adult/mature content to appear in movie search results</div>

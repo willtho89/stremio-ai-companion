@@ -59,13 +59,15 @@ async def homepage(request: Request):
 
 
 @router.get("/configure", response_class=HTMLResponse)
-async def configure_page(request: Request, config: Optional[str] = Query(None)):
+async def configure_page(request: Request, config: Optional[str] = Query(None), adult: Optional[int] = Query(None)):
     """
     Render the configuration page.
 
     If a config parameter is provided, it will pre-fill the form with existing settings.
+    If an adult parameter is provided, it will set the adult content checkbox.
     """
     existing_config = None
+    adult_flag = None
     if config:
         try:
             config_data = encryption_service.decrypt(config)
@@ -75,8 +77,13 @@ async def configure_page(request: Request, config: Optional[str] = Query(None)):
             logger.warning(f"Invalid config provided to configure page: {e}")
             raise
 
+    # Set adult flag from URL parameter if provided
+    if adult is not None:
+        adult_flag = bool(adult)
+
     return templates.TemplateResponse(
-        "configure.html", {"request": request, "existing_config": existing_config, "settings": settings}
+        "configure.html",
+        {"request": request, "existing_config": existing_config, "adult_flag": adult_flag, "settings": settings},
     )
 
 
@@ -183,6 +190,14 @@ async def save_config(
         )
     except Exception as e:
         return JSONResponse({"success": False, "detail": f"Configuration error: {str(e)}"}, status_code=500)
+
+
+@router.get("/config/{config}/adult/{adult}/{content_type}/configure")
+async def reconfigure_page_redirect(config: str, adult: int, content_type: str):
+    """
+    Redirect to configure page with existing config and adult flag (content type agnostic).
+    """
+    return RedirectResponse(url=f"/configure?config={config}&adult={adult}")
 
 
 @router.get("/config/{config}")
