@@ -452,8 +452,27 @@ async def get_catalog(config: str, adult: int, content_type: ContentType, catalo
     return await _cached_catalog(config, content_type, catalog_id, include_adult=bool(adult))
 
 
+@router.get("/config/{config}/adult/{adult}/{content_type_extra}/catalog/{content_type}/{catalog_id}.json")
+async def get_catalog_split(
+    config: str, adult: int, content_type_extra: str | None, content_type: ContentType, catalog_id: str
+):
+    return await _cached_catalog(config, content_type, catalog_id, include_adult=bool(adult))
+
+
 @router.get("/config/{config}/adult/{adult}/catalog/{content_type}/{catalog_id}/skip={skip}.json")
 async def get_catalog_with_skip(config: str, adult: int, content_type: ContentType, catalog_id: str, skip: int):
+    """
+    Path-based catalog endpoint with pagination support.
+
+    This endpoint is called by Stremio when it reaches the end of the catalog list.
+    """
+    return await _cached_catalog(config, content_type, catalog_id, skip, include_adult=bool(adult))
+
+
+@router.get("/config/{config}/adult/{adult}/{content_type_extra}/catalog/{content_type}/{catalog_id}/skip={skip}.json")
+async def get_catalog_with_skip_split(
+    config: str, adult: int, content_type_extra: str | None, content_type: ContentType, catalog_id: str, skip: int
+):
     """
     Path-based catalog endpoint with pagination support.
 
