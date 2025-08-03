@@ -35,7 +35,7 @@ class RPDBService:
             URL to the poster image or None if not available
         """
         if not self.api_key or not imdb_id:
-            self.logger.info("RPDB API key or IMDB ID not provided")
+            self.logger.debug("RPDB API key or IMDB ID not provided")
             return None
 
         try:
@@ -49,7 +49,7 @@ class RPDBService:
 
             # For valid API keys, we can return the URL directly without testing
             # The image will load if it exists, or show broken image if not
-            self.logger.info(f"Generated RPDB poster URL for {imdb_id}")
+            self.logger.debug(f"Generated RPDB poster URL for {imdb_id}")
             return poster_url
 
         except Exception as e:

@@ -10,5 +10,5 @@ from app.core.config import settings
 from app.core.logging import logger
 
 if __name__ == "__main__":
-    logger.info(f"Starting Stremio AI Companion on {settings.HOST}:{settings.PORT}")
+    logger.debug(f"Starting Stremio AI Companion on {settings.HOST}:{settings.PORT}")
     uvicorn.run(app, host=settings.HOST, port=settings.PORT)

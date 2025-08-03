@@ -22,11 +22,11 @@ async def lifespan(app: FastAPI):
     if cache.is_redis:
         try:
             await cache._redis.ping()  # type: ignore
-            logger.info("Connected to Redis on startup")
+            logger.info("Cache backend: Redis connected on startup")
         except Exception:
             logger.warning("Redis configured but unreachable on startup; falling back to LRU")
     else:
-        logger.info("Redis not configured; using LRU cache")
+        logger.info("Cache backend: in-memory LRU")
     yield
 
 
@@ -68,7 +68,7 @@ async def log_requests(request: Request, call_next):
         safe_url = f"{base}/config/{masked}"
     else:
         safe_url = url_str
-    logger.debug(f"{request.method} {safe_url} - Headers: {dict(request.headers)}")
+    logger.debug(f"{request.method} {safe_url}")
     response = await call_next(request)
     duration = datetime.now() - start_time
     logger.info(f"Response: {response.status_code} - Duration: {duration.total_seconds()}s")

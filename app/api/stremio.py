@@ -67,7 +67,7 @@ async def _process_metadata_pipeline(
             search_tasks.append(search_fn(title, year, include_adult))
 
         search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-        logger.info(f"Completed {len(search_results)} TMDB searches")
+        logger.debug(f"Completed {len(search_results)} TMDB searches")
 
         detail_tasks = []
         valid_search_results = []
@@ -77,7 +77,7 @@ async def _process_metadata_pipeline(
                 valid_search_results.append(result)
 
         detail_results = await asyncio.gather(*detail_tasks, return_exceptions=True)
-        logger(f"Completed {len(detail_results)} detail fetches")
+        logger.debug(f"Completed {len(detail_results)} detail fetches")
 
         poster_tasks = []
         valid_details = []
@@ -270,7 +270,7 @@ async def _process_catalog_request(
         if not max_results:
             max_results = config_obj.max_results
 
-        logger.info(f"Processing {content_type} catalog request for '{search}' with {max_results} max results")
+        logger.debug(f"Processing {content_type} catalog request for '{search}' with {max_results} max results")
 
         llm_service = LLMService(config_obj)
         tmdb_service = TMDBService(config_obj.tmdb_read_access_token)
@@ -289,7 +289,7 @@ async def _process_catalog_request(
         # Generate suggestions based on content type
         if content_type == ContentType.MOVIE:
             movie_titles = await llm_service.generate_movie_suggestions(search, max_results)
-            logger.info(f"Generated {len(movie_titles)} movie suggestions: {movie_titles}")
+            logger.debug(f"Generated {len(movie_titles)} movie suggestions: {movie_titles}")
             movie_metas = await _process_metadata_pipeline(
                 tmdb_service,
                 rpdb_service,
@@ -299,11 +299,11 @@ async def _process_catalog_request(
                 details_fn=tmdb_service.get_movie_details,
                 meta_builder=movie_to_stremio_meta,
             )
-            logger.info(f"Returning {len(movie_metas)} movie metadata entries")
+            logger.debug(f"Returning {len(movie_metas)} movie metadata entries")
             return {"metas": movie_metas}
         else:  # content_type == ContentType.SERIES
             series_titles = await llm_service.generate_tv_suggestions(search, max_results)
-            logger.info(f"Generated {len(series_titles)} TV series suggestions: {series_titles}")
+            logger.debug(f"Generated {len(series_titles)} TV series suggestions: {series_titles}")
             series_metas = await _process_metadata_pipeline(
                 tmdb_service,
                 rpdb_service,
@@ -313,7 +313,7 @@ async def _process_catalog_request(
                 details_fn=tmdb_service.get_tv_details,
                 meta_builder=tv_to_stremio_meta,
             )
-            logger.info(f"Returning {len(series_metas)} series metadata entries")
+            logger.debug(f"Returning {len(series_metas)} series metadata entries")
             return {"metas": series_metas}
 
     except Exception as e:
@@ -350,11 +350,11 @@ async def _cached_catalog(
         # Fall back to original behavior for skip=0
         cached = await cache.aget(key)
         if cached is not None:
-            logger.info(f"Cache hit for key={key}")
+            logger.debug(f"Cache hit for key={key}")
             result_names = [meta.get("name", "Unknown") for meta in cached["metas"]]
             logger.debug(f"LRU Cache: Returning {len(cached['metas'])} cached items for skip={skip}: {result_names}")
             return cached
-        logger.info(f"Cache miss for key={key}")
+        logger.debug(f"Cache miss for key={key}")
         result = await _process_catalog_request(
             config,
             prompt,
@@ -371,9 +371,9 @@ async def _cached_catalog(
     cached_entries = await cache.aget(key)
     if cached_entries is None:
         cached_entries = {"metas": []}
-        logger.info(f"Cache miss for key={key}")
+        logger.debug(f"Cache miss for key={key}")
     else:
-        logger.info(f"Cache hit for key={key}, found {len(cached_entries['metas'])} existing entries")
+        logger.debug(f"Cache hit for key={key}, found {len(cached_entries['metas'])} existing entries")
 
     # Adjust skip to treat 100 as index 0 (client quirk)
     adjusted_skip = max(0, skip - 100)
@@ -434,7 +434,7 @@ async def _cached_catalog(
     cached_entries["metas"].extend(new_metas)
     await cache.aset(key, cached_entries, catalog_ttl)
 
-    logger.info(f"Added {len(new_metas)} new entries, total now: {len(cached_entries['metas'])}")
+    logger.debug(f"Added {len(new_metas)} new entries, total now: {len(cached_entries['metas'])}")
 
     # Hacky: Always return the newly generated items to save LLM compute time
     result_names = [meta.get("name", "Unknown") for meta in new_metas]

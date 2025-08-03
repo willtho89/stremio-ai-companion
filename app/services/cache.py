@@ -155,12 +155,12 @@ class Cache:
                 port = int(settings.REDIS_PORT or 6379)
                 db = int(settings.REDIS_DB or 0)
                 backend = RedisBackend(host=host, port=port, db=db)
-                logger.info("Redis cache backend initialized")
+                logger.debug("Redis cache backend initialized")
                 return backend
             except Exception as e:
                 logger.warning(f"Failed to initialize Redis backend: {e}")
 
-        logger.info("Using in-memory cache backend")
+        logger.info("Cache backend: in-memory LRU")
         return MemoryBackend(maxsize=maxsize)
 
     @property
