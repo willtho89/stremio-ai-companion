@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0]
+
+### Added
+- Catalogs caching with configurable limits
+
+### Changed
+- Cache refactor with stable, config-independent keys
+- Mask sensitive config values in logs
+- Load config with new URL handling
+- Update preview and index templates for cached catalogs
+- Dependency updates and fixes
+
+### Fixed
+- Test stability and minor issues
+
 ## [0.2.3]
 
 ### Changed

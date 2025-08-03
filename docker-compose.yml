@@ -2,8 +2,7 @@ version: '3.8'
 
 services:
   stremio-ai-companion:
-    # image: ghcr.io/willtho89/stremio-ai-companion:latest
-    build: .
+    image: ghcr.io/willtho89/stremio-ai-companion:latest
     ports:
       - "8000:8000"
     environment:
