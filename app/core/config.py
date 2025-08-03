@@ -45,6 +45,7 @@ class Settings(BaseSettings):
 
     # Catalog settings
     MAX_CATALOG_RESULTS: int = Field(default=10, description="Maximum number of results to return in cached catalog")
+    MAX_CATALOG_ENTRIES: int = Field(default=100, description="Maximum total entries to store per catalog")
 
     # Manifest settings
     SPLIT_MANIFESTS: bool = Field(default=False, description="Enable split manifests for movie/series types")

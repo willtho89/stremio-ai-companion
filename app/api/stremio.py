@@ -6,7 +6,7 @@ import asyncio
 import json
 import time
 from functools import lru_cache, wraps
-from app.services.cache import Cache, make_timed_lru, CACHE_INSTANCE
+from app.services.cache import CACHE_INSTANCE
 
 from fastapi import APIRouter, HTTPException
 from typing import Optional, List
@@ -319,29 +319,112 @@ async def _process_catalog_request(config: str, search: str, content_type: Conte
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def _cached_catalog(config: str, content_type: ContentType, catalog_id: str | None = None):
+async def _cached_catalog(config: str, content_type: ContentType, catalog_id: str | None = None, skip: int = 0):
     """
-    Cached version of the catalogue view.
+    Cached version of the catalogue view with pagination support (Redis only).
     """
     cache = CACHE_INSTANCE
     prompt = CATALOG_PROMPTS.get(catalog_id, CATALOG_PROMPTS["trending"])["prompt"]
-    key = f"catalog:{catalog_id}:{settings.MAX_CATALOG_RESULTS}:{hash(config)}"
 
-    cached = await cache.aget(key)
-    if cached is not None:
-        logger.info(f"Cache hit for key={key}")
-        return cached
-    logger.info(f"Cache miss for key={key}")
-    result = await _process_catalog_request(
+    # Pagination only works with Redis cache
+    if not cache.is_redis():
+        if skip > 0:
+            # For non-Redis cache, return empty results for pagination requests
+            logger.info("Pagination not supported with LRU cache, returning empty results")
+            return {"metas": []}
+
+        # Fall back to original behavior for skip=0
+        key = f"catalog:{catalog_id}:{settings.MAX_CATALOG_RESULTS}:{hash(config)}"
+        cached = await cache.aget(key)
+        if cached is not None:
+            logger.info(f"Cache hit for key={key}")
+            result_names = [meta.get("name", "Unknown") for meta in cached["metas"]]
+            logger.info(f"LRU Cache: Returning {len(cached['metas'])} cached items for skip={skip}: {result_names}")
+            return cached
+        logger.info(f"Cache miss for key={key}")
+        result = await _process_catalog_request(
+            config,
+            prompt,
+            content_type,
+            max_results=settings.MAX_CATALOG_RESULTS,
+        )
+        await cache.aset(key, result)
+        result_names = [meta.get("name", "Unknown") for meta in result["metas"]]
+        logger.info(f"LRU Cache: Returning {len(result['metas'])} items for skip={skip}: {result_names}")
+        return result
+
+    # Redis-based pagination logic - can update cached data
+    key = f"catalog:{catalog_id}:{hash(config)}"
+
+    # Get existing cached entries
+    cached_entries = await cache.aget(key)
+    if cached_entries is None:
+        cached_entries = {"metas": []}
+        logger.info(f"Cache miss for key={key}")
+    else:
+        logger.info(f"Cache hit for key={key}, found {len(cached_entries['metas'])} existing entries")
+
+    # Adjust skip to treat 100 as index 0 (client quirk)
+    adjusted_skip = max(0, skip - 100)
+    
+    # Check if we have enough entries to satisfy the request
+    total_entries = len(cached_entries["metas"])
+    if adjusted_skip < total_entries:
+        # Return existing entries from cache
+        end_index = min(adjusted_skip + settings.MAX_CATALOG_RESULTS, total_entries)
+        result_metas = cached_entries["metas"][adjusted_skip:end_index]
+        result_names = [meta.get("name", "Unknown") for meta in result_metas]
+        logger.info(f"Redis Cache: Returning {len(result_metas)} cached items for skip={skip} (adjusted to {adjusted_skip}): {result_names}")
+        return {"metas": result_metas}
+    
+    # Need to generate more entries
+    if total_entries >= settings.MAX_CATALOG_ENTRIES:
+        # Already at max entries, return empty
+        logger.info(f"Max catalog entries ({settings.MAX_CATALOG_ENTRIES}) reached for {catalog_id}")
+        return {"metas": cached_entries["metas"]}
+    
+    # Generate new entries, avoiding duplicates
+    existing_ids = {meta.get("id") for meta in cached_entries["metas"]}
+    existing_titles = {meta.get("name", "").lower() for meta in cached_entries["metas"]}
+    
+    # Create prompt that includes existing entries to avoid duplicates
+    existing_list = [meta.get("name", "") for meta in cached_entries["metas"]]
+    enhanced_prompt = prompt
+    if existing_list:
+        enhanced_prompt += f"\n\nAvoid recommending these already suggested titles: {', '.join(existing_list)}"
+    
+    # Generate more entries
+    new_result = await _process_catalog_request(
         config,
-        prompt,
+        enhanced_prompt,
         content_type,
-        max_results=settings.MAX_CATALOG_RESULTS,
+        max_results=settings.MAX_CATALOG_RESULTS * 2,  # Generate more to account for duplicates
     )
-    await cache.aset(key, result)
-    return result
-
-
+    
+    # Filter out duplicates
+    new_metas = []
+    for meta in new_result["metas"]:
+        meta_id = meta.get("id")
+        meta_name = meta.get("name", "").lower()
+        if meta_id not in existing_ids and meta_name not in existing_titles:
+            new_metas.append(meta)
+            existing_ids.add(meta_id)
+            existing_titles.add(meta_name)
+            
+            # Stop if we reach max entries
+            if len(cached_entries["metas"]) + len(new_metas) >= settings.MAX_CATALOG_ENTRIES:
+                break
+    
+    # Update cache with new entries (only possible with Redis)
+    cached_entries["metas"].extend(new_metas)
+    await cache.aset(key, cached_entries)
+    
+    logger.info(f"Added {len(new_metas)} new entries, total now: {len(cached_entries['metas'])}")
+    
+    # Hacky: Always return the newly generated items to save LLM compute time
+    result_names = [meta.get("name", "Unknown") for meta in new_metas]
+    logger.info(f"Redis Cache: Returning {len(new_metas)} NEW items for skip={skip}: {result_names}")
+    return {"metas": new_metas}
 
 
 @router.get("/config/{config}/catalog/{content_type}/{catalog_id}.json")
@@ -351,8 +434,17 @@ async def get_catalog(config: str, content_type: ContentType, catalog_id: str):
 
     This endpoint is called by Stremio to get movie metadata based on a search query.
     """
-
     return await _cached_catalog(config, content_type, catalog_id)
+
+
+@router.get("/config/{config}/catalog/{content_type}/{catalog_id}/skip={skip}.json")
+async def get_catalog_with_skip(config: str, content_type: ContentType, catalog_id: str, skip: int):
+    """
+    Path-based catalog endpoint with pagination support.
+
+    This endpoint is called by Stremio when it reaches the end of the catalog list.
+    """
+    return await _cached_catalog(config, content_type, catalog_id, skip)
 
 
 @router.get("/config/{config}/catalog/{content_type}/{catalog_id}/search={search}.json")

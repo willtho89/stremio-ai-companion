@@ -66,20 +66,3 @@ class Cache:
             self._lru_store.pop(next(iter(self._lru_store)))
 
 CACHE_INSTANCE = Cache(ttl_seconds=86400)
-
-def make_timed_lru(seconds: int, maxsize: int = 128):
-    def wrapper(func: Callable):
-        cached = lru_cache(maxsize=maxsize)(func)
-        cached.lifetime = seconds
-        cached.expiration = time.time() + seconds
-
-        @wraps(cached)
-        def wrapped(*args, **kwargs):
-            if time.time() > cached.expiration:
-                cached.cache_clear()
-                cached.expiration = time.time() + cached.lifetime
-            return cached(*args, **kwargs)
-
-        return wrapped
-
-    return wrapper
