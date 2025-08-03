@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.6]
+
+### Changed
+- Minor patches and maintenance.
+
 ## [0.3.5]
 
 ### Changed

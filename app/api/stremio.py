@@ -160,7 +160,7 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
                             "type": "movie",
                             "id": f"{cid}_movie",
                             "name": cfg["title"],
-                            "extra": [{"name": "search", "isRequired": False}],
+                            # "extra": [{"name": "search", "isRequired": False}],
                         }
                     )
         elif content_type == "series":
@@ -179,7 +179,7 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
                             "type": "series",
                             "id": f"{cid}_series",
                             "name": cfg["title"],
-                            "extra": [{"name": "search", "isRequired": False}],
+                            # "extra": [{"name": "search", "isRequired": False}],
                         }
                     )
 
@@ -490,3 +490,21 @@ async def get_catalog_search(config: str, adult: int, content_type: ContentType,
     """
     # Always use the non-cached version for explicit searches
     return await _process_catalog_request(config, search, content_type, bool(adult))
+
+
+@router.get(
+    "/config/{config}/adult/{adult}/{content_type_extra}/catalog/{content_type}/{catalog_id}/search={search}.json"
+)
+async def get_catalog_search_split(
+    config: str, adult: int, content_type_extra: str | None, content_type: ContentType, catalog_id: str, search: str
+):
+    """
+    Path-based catalog search endpoint for movies.
+
+    This endpoint is called by Stremio to get movie metadata based on a search query.
+    """
+    # Always use the non-cached version for explicit searches
+    return await _process_catalog_request(config, search, content_type, bool(adult))
+
+
+#
