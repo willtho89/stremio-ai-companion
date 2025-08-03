@@ -2,12 +2,12 @@
 Tests for the _cached_catalog function in the Stremio API.
 """
 
+from unittest.mock import patch, AsyncMock
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 from app.api.stremio import _cached_catalog
 from app.models.enums import ContentType
-from app.services.cache import Cache
 
 
 @pytest.fixture
@@ -37,23 +37,22 @@ class TestCachedCatalog:
         """Test LRU cache behavior with skip=0."""
         # Set up cache miss
         mock_cache.aget.return_value = None
-        
+
         result = await _cached_catalog("test_config", ContentType.MOVIE, "trending_movie")
-        
-        # Verify cache key format - don't check exact format as hash implementation may vary
+
+        # Verify cache key format
         cache_key_arg = mock_cache.aget.call_args[0][0]
-        assert cache_key_arg.startswith("catalog:trending_movie:")
-        assert "test_config" not in cache_key_arg  # Hash should obscure the config
-        
+        assert cache_key_arg == "catalog:trending_movie"
+
         # Verify _process_catalog_request was called with correct args
         mock_process_catalog_request.assert_called_once()
         assert mock_process_catalog_request.call_args[0][0] == "test_config"
         assert "trending" in mock_process_catalog_request.call_args[0][1].lower()
         assert mock_process_catalog_request.call_args[0][2] == ContentType.MOVIE
-        
+
         # Verify result
         assert result == {"metas": [{"name": "Test Movie", "id": "test-id"}]}
-        
+
         # Verify cache set
         mock_cache.aset.assert_called_once()
         assert mock_cache.aset.call_args[0][0] == cache_key_arg
@@ -63,12 +62,12 @@ class TestCachedCatalog:
     async def test_lru_cache_skip_nonzero(self, mock_cache, mock_process_catalog_request):
         """Test LRU cache behavior with skip > 0."""
         result = await _cached_catalog("test_config", ContentType.MOVIE, "trending_movie", skip=100)
-        
+
         # Verify no cache operations or processing for skip > 0 with LRU cache
         mock_cache.aget.assert_not_called()
         mock_process_catalog_request.assert_not_called()
         mock_cache.aset.assert_not_called()
-        
+
         # Verify empty result
         assert result == {"metas": []}
 
@@ -78,18 +77,18 @@ class TestCachedCatalog:
         # Set up cache hit
         cached_data = {"metas": [{"name": "Cached Movie", "id": "cached-id"}]}
         mock_cache.aget.return_value = cached_data
-        
+
         result = await _cached_catalog("test_config", ContentType.MOVIE, "trending_movie")
-        
+
         # Verify cache get
         mock_cache.aget.assert_called_once()
-        
+
         # Verify _process_catalog_request was not called
         mock_process_catalog_request.assert_not_called()
-        
+
         # Verify result is from cache
         assert result == cached_data
-        
+
         # Verify no cache set
         mock_cache.aset.assert_not_called()
 
@@ -99,20 +98,19 @@ class TestCachedCatalog:
         # Set up Redis cache
         mock_cache.is_redis = True
         mock_cache.aget.return_value = None
-        
+
         result = await _cached_catalog("test_config", ContentType.MOVIE, "trending_movie")
-        
-        # Verify cache key format (different for Redis)
+
+        # Verify cache key format
         cache_key_arg = mock_cache.aget.call_args[0][0]
-        assert cache_key_arg.startswith("catalog:trending_movie:")
-        assert "test_config" not in cache_key_arg  # Hash should obscure the config
-        
+        assert cache_key_arg == "catalog:trending_movie"
+
         # Verify _process_catalog_request was called
         mock_process_catalog_request.assert_called_once()
-        
+
         # Verify result
         assert result == {"metas": [{"name": "Test Movie", "id": "test-id"}]}
-        
+
         # Verify cache set
         mock_cache.aset.assert_called_once()
 
@@ -124,59 +122,51 @@ class TestCachedCatalog:
         existing_entries = {
             "metas": [
                 {"name": "Existing Movie 1", "id": "existing-1"},
-                {"name": "Existing Movie 2", "id": "existing-2"}
+                {"name": "Existing Movie 2", "id": "existing-2"},
             ]
         }
         mock_cache.aget.return_value = existing_entries
-        
+
         # New entries to be added
-        new_entries = {
-            "metas": [
-                {"name": "New Movie", "id": "new-id"}
-            ]
-        }
+        new_entries = {"metas": [{"name": "New Movie", "id": "new-id"}]}
         mock_process_catalog_request.return_value = new_entries
-        
+
         result = await _cached_catalog("test_config", ContentType.MOVIE, "trending_movie", skip=100)
-        
-        # Verify adjusted skip (100 -> 0)
-        # Should return existing entries since adjusted_skip < total_entries
-        assert result == {"metas": existing_entries["metas"]}
-        
-        # Verify no new processing
-        mock_process_catalog_request.assert_not_called()
+
+        # With only 2 existing entries and skip=100 (adjusted to 0), we need more entries
+        # Should generate new entries since we don't have enough cached entries
+        mock_process_catalog_request.assert_called_once()
+
+        # Should return new entries
+        assert result == {"metas": [{"name": "New Movie", "id": "new-id"}]}
 
     @pytest.mark.asyncio
     async def test_redis_cache_pagination(self, mock_cache, mock_process_catalog_request):
         """Test Redis cache pagination."""
         # Set up Redis cache
         mock_cache.is_redis = True
-        
+
         # Set up existing entries
-        existing_entries = {
-            "metas": [
-                {"name": f"Movie {i}", "id": f"id-{i}"} for i in range(1, 11)
-            ]
-        }
+        existing_entries = {"metas": [{"name": f"Movie {i}", "id": f"id-{i}"} for i in range(1, 11)]}
         mock_cache.aget.return_value = existing_entries
-        
+
         # Request with skip=110 (adjusted to 10)
         result = await _cached_catalog("test_config", ContentType.MOVIE, "trending_movie", skip=110)
-        
+
         # Since adjusted_skip (10) == total_entries (10), should generate new entries
         mock_process_catalog_request.assert_called_once()
-        
+
         # Verify enhanced prompt includes existing entries
         prompt_arg = mock_process_catalog_request.call_args[0][1]
         assert "Avoid recommending these already suggested titles" in prompt_arg
         for i in range(1, 11):
             assert f"Movie {i}" in prompt_arg
-        
+
         # Verify cache was updated with combined entries
         mock_cache.aset.assert_called_once()
         # Don't check exact key format, but verify the value contains both existing and new entries
         assert len(mock_cache.aset.call_args[0][1]["metas"]) == 11  # 10 existing + 1 new
-        
+
         # Verify result contains only new entries
         assert result == {"metas": [{"name": "Test Movie", "id": "test-id"}]}
 
@@ -185,24 +175,21 @@ class TestCachedCatalog:
         """Test Redis cache with maximum entries reached."""
         # Set up Redis cache
         mock_cache.is_redis = True
-        
+
         # Set up existing entries at max capacity
         with patch("app.api.stremio.settings") as mock_settings:
             mock_settings.MAX_CATALOG_ENTRIES = 10
-            
-            existing_entries = {
-                "metas": [
-                    {"name": f"Movie {i}", "id": f"id-{i}"} for i in range(1, 11)
-                ]
-            }
+            mock_settings.MAX_CATALOG_RESULTS = 20
+
+            existing_entries = {"metas": [{"name": f"Movie {i}", "id": f"id-{i}"} for i in range(1, 11)]}
             mock_cache.aget.return_value = existing_entries
-            
+
             # Request with skip beyond existing entries
             result = await _cached_catalog("test_config", ContentType.MOVIE, "trending_movie", skip=200)
-            
+
             # Should not generate new entries since max is reached
             mock_process_catalog_request.assert_not_called()
-            
+
             # Should return existing entries
             assert result == {"metas": existing_entries["metas"]}
 
@@ -211,13 +198,13 @@ class TestCachedCatalog:
         """Test fallback to trending when catalog_id is invalid."""
         # Set up cache miss
         mock_cache.aget.return_value = None
-        
+
         # Invalid catalog_id
         await _cached_catalog("test_config", ContentType.MOVIE, "invalid_catalog")
-        
+
         # Verify _process_catalog_request was called
         mock_process_catalog_request.assert_called_once()
-        
+
         # Verify trending prompt was used
         prompt_arg = mock_process_catalog_request.call_args[0][1]
         assert "trending" in prompt_arg.lower()
@@ -227,40 +214,33 @@ class TestCachedCatalog:
         """Test filtering of duplicate entries in Redis cache."""
         # Set up Redis cache
         mock_cache.is_redis = True
-        
+
         # Set up existing entries
-        existing_entries = {
-            "metas": [
-                {"name": "Existing Movie", "id": "existing-id"}
-            ]
-        }
+        existing_entries = {"metas": [{"name": "Existing Movie", "id": "existing-id"}]}
         mock_cache.aget.return_value = existing_entries
-        
+
         # New entries with a duplicate
         new_entries = {
             "metas": [
                 {"name": "Existing Movie", "id": "duplicate-id"},  # Same name, different ID
-                {"name": "New Movie", "id": "new-id"}
+                {"name": "New Movie", "id": "new-id"},
             ]
         }
         mock_process_catalog_request.return_value = new_entries
-        
+
         # Request with skip beyond existing entries
         with patch("app.api.stremio.settings") as mock_settings:
             mock_settings.MAX_CATALOG_RESULTS = 5
             mock_settings.MAX_CATALOG_ENTRIES = 100
-            
+
             result = await _cached_catalog("test_config", ContentType.MOVIE, "trending_movie", skip=110)
-            
+
             # Verify only non-duplicate entry was added
             expected_combined = {
-                "metas": [
-                    {"name": "Existing Movie", "id": "existing-id"},
-                    {"name": "New Movie", "id": "new-id"}
-                ]
+                "metas": [{"name": "Existing Movie", "id": "existing-id"}, {"name": "New Movie", "id": "new-id"}]
             }
             mock_cache.aset.assert_called_once()
             assert mock_cache.aset.call_args[0][1] == expected_combined
-            
+
             # Verify result contains only new non-duplicate entries
             assert result == {"metas": [{"name": "New Movie", "id": "new-id"}]}

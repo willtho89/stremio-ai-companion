@@ -8,14 +8,14 @@
 
 ## ✨ Features
 
-- 🧠 Natural language movie search: e.g. “feel-good sci-fi from the 90s”
+- 🧠 Natural language movie & series search: e.g. “feel-good sci-fi from the 90s”
 - 🎯 Smart AI recommendations based on mood and context
-- 🎨 Detailed movie data from TMDB + optional enhanced artwork from RPDB
+- 🎨 Detailed movie & TV data from TMDB + optional enhanced artwork from RPDB
 - ⚡ Fast response time — typically 5–6 seconds per query
 - 🔐 100% privacy-first: encrypted, stateless config via shareable URLs
 - 🎞️ Split manifest support: Movies, Series, or both (toggleable)
 - 🧺 Curated Collections (coming soon): AI-crafted picks by theme, mood, genre
-- 🧩 Native Stremio support: works as a catalog addon
+- 🧩 Native Stremio support: works as a catalog addon (movies, series, and catalogs)
 
 ---
 
@@ -58,12 +58,13 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 1. Describe what you want to watch.
 2. AI understands your request, extracts intent.
 3. Suggests clever matches using natural language & GPT-style models.
-4. Movie data enriched with TMDB.
+4. Metadata enriched with TMDB for movies and TV.
 5. Beautiful artwork (optional) via RPDB.
 
 Examples:
 
 - “films like Inception and The Matrix”
+- “tv shows like True Detective season 1”
 - “lighthearted rom-coms from Europe”
 - “space horror set on abandoned ships”
 - “Oscar wins for best cinematography”
@@ -128,14 +129,18 @@ ENABLE_FEED_CATALOGS=true
 
 ---
 
-## 📡 Stremio Manifest URLs
+## 📡 Stremio Manifest & Catalog URLs
 
 - 🔗 Default combined:  
-  `/config/{CONFIG}/manifest.json`
+  `/config/{CONFIG}/adult/{0|1}/manifest.json`
 - 🎬 Movies only:  
-  `/config/{CONFIG}/movie/manifest.json`
+  `/config/{CONFIG}/adult/{0|1}/movie/manifest.json`
 - 📺 Series only:  
-  `/config/{CONFIG}/series/manifest.json`
+  `/config/{CONFIG}/adult/{0|1}/series/manifest.json`
+- 🧺 Curated catalogs (movies & series):
+  `/config/{CONFIG}/adult/{0|1}/catalog/{movie|series}/{catalog_id}.json`
+  `/config/{CONFIG}/adult/{0|1}/catalog/{movie|series}/{catalog_id}/skip={N}.json`
+  `/config/{CONFIG}/adult/{0|1}/catalog/{movie|series}/{catalog_id}/search={QUERY}.json`
 
 Use the preview dropdown to copy them.
 
@@ -150,11 +155,11 @@ Use the preview dropdown to copy them.
 | GET    | /configure?config=... | Edit encrypted URL |
 | POST   | /save-config           | Returns a manifest URL |
 | GET    | /config/.../preview    | Human preview of config |
-| GET    | /config/.../manifest.json | Combined manifest |
-| GET    | /config/.../movie/manifest.json | Movies-only manifest |
-| GET    | /config/.../series/manifest.json | Series-only manifest |
-| GET    | /config/.../catalog/... | Stremio catalog entries |
-| GET    | /config/.../catalog/.../search=... | Catalog search queries |
+| GET    | /config/.../adult/{0|1}/manifest.json | Combined manifest |
+| GET    | /config/.../adult/{0|1}/movie/manifest.json | Movies-only manifest |
+| GET    | /config/.../adult/{0|1}/series/manifest.json | Series-only manifest |
+| GET    | /config/.../adult/{0|1}/catalog/{movie|series}/{catalog_id}.json | Curated catalog entries |
+| GET    | /config/.../adult/{0|1}/catalog/{movie|series}/{catalog_id}/search=... | Catalog search queries |
 
 ---
 
@@ -213,7 +218,7 @@ MIT — See [LICENSE](LICENSE)
 ## 🙏 Acknowledgments
 
 - [Stremio](https://www.stremio.com/) — media discovery reimagined
-- [TMDB](https://themoviedb.org) — open movie metadata platform
+- [TMDB](https://themoviedb.org) — open movie & TV metadata platform
 - [OpenRouter](https://openrouter.ai) — model routing + GPT ecosystem
 - [RatingPosterDB](https://ratingposterdb.com/) — gorgeous cinematic posters
 - [OpenAI](https://openai.com/) — large language models

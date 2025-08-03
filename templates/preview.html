@@ -342,9 +342,10 @@
             contentResults.innerHTML = '<p>Loading...</p>';
             
             try {
-                // Extract config from current path: /config/{config}/preview
+                // Extract config and adult from current path: /config/{config}/adult/{adult}/preview
                 const pathParts = window.location.pathname.split('/');
-                const config = pathParts[2]; // config is the 3rd part (index 2)
+                const config = pathParts[2];
+                const adult = pathParts[4] || '0';
                 
                 // Determine which catalogs to search based on selected manifest type
                 const manifestType = document.getElementById('manifestType').value;
@@ -357,20 +358,15 @@
                     const movieStart = performance.now();
                     const seriesStart = performance.now();
                     [movieResponse, seriesResponse] = await Promise.all([
-                        fetch(`/config/${encodeURIComponent(config)}/catalog/movie/local_companion_stremio_movie/search=${encodeURIComponent(query)}.json`).catch(() => null),
-                        fetch(`/config/${encodeURIComponent(config)}/catalog/series/local_companion_stremio_series/search=${encodeURIComponent(query)}.json`).catch(() => null)
-                    ]);
+                         fetch(`/config/${encodeURIComponent(config)}/adult/${encodeURIComponent(adult)}/catalog/movie/local_companion_stremio_movie/search=${encodeURIComponent(query)}.json`).catch(() => null),
+                        fetch(`/config/${encodeURIComponent(config)}/adult/${encodeURIComponent(adult)}/catalog/series/local_companion_stremio_series/search=${encodeURIComponent(query)}.json`).catch(() => null)                    ]);
                 } else if (manifestType === 'movie') {
                     // Search only movie catalog using movie-specific endpoint
-                    const movieStart = performance.now();
-                    movieResponse = await fetch(`/config/${encodeURIComponent(config)}/movie/catalog/movie/local_companion_stremio_movie/search=${encodeURIComponent(query)}.json`).catch(() => null);
-                    var movieEnd = performance.now();
-                } else if (manifestType === 'series') {
+                     const movieStart = performance.now();
+                     movieResponse = await fetch(`/config/${encodeURIComponent(config)}/adult/${encodeURIComponent(adult)}/movie/catalog/movie/local_companion_stremio_movie/search=${encodeURIComponent(query)}.json`).catch(() => null);                    var movieEnd = performance.now();                } else if (manifestType === 'series') {
                     // Search only series catalog using series-specific endpoint
-                    const seriesStart = performance.now();
-                    seriesResponse = await fetch(`/config/${encodeURIComponent(config)}/series/catalog/series/local_companion_stremio_series/search=${encodeURIComponent(query)}.json`).catch(() => null);
-                    var seriesEnd = performance.now();
-                }
+                     const seriesStart = performance.now();
+                     seriesResponse = await fetch(`/config/${encodeURIComponent(config)}/adult/${encodeURIComponent(adult)}/series/catalog/series/local_companion_stremio_series/search=${encodeURIComponent(query)}.json`).catch(() => null);                    var seriesEnd = performance.now();                }
                 
                 let allMetas = [];
                 let movieCount = 0;
@@ -460,18 +456,17 @@
         });
         
         function goToReconfigure() {
-            // Extract config from current path: /config/{config}/preview
+            // Extract config from current path: /config/{config}/adult/{adult}/preview
             const pathParts = window.location.pathname.split('/');
-            const config = pathParts[2]; // config is the 3rd part (index 2)
+            const config = pathParts[2];
             if (config) {
                 window.location.href = `/configure?config=${encodeURIComponent(config)}`;
-            }
-        }
+            }        }
         
         function goBackToConfigure() {
-            // Extract config from current path: /config/{config}/preview
+            // Extract config from current path: /config/{config}/adult/{adult}/preview
             const pathParts = window.location.pathname.split('/');
-            const config = pathParts[2]; // config is the 3rd part (index 2)
+            const config = pathParts[2];
             if (config) {
                 window.location.href = `/configure?config=${encodeURIComponent(config)}`;
             } else {

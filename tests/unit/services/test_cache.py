@@ -2,10 +2,10 @@
 Tests for the cache service.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 import time
-import json
+from unittest.mock import patch, MagicMock, AsyncMock
+
+import pytest
 
 from app.services.cache import Cache, MemoryBackend, RedisBackend, CacheBackend, RedisError
 
@@ -16,10 +16,10 @@ except ImportError:
     # Create a mock RedisError for testing
     class MockRedisError(Exception):
         pass
-    
+
     class MockAioRedis:
         RedisError = MockRedisError
-    
+
     aioredis = MockAioRedis
 
 
@@ -64,7 +64,7 @@ class TestMemoryBackend:
         await memory_backend.get("key1")
         # Add another item, should evict key2 (least recently used)
         await memory_backend.set("key4", "value4", 60)
-        
+
         # key1 and key3 should still be there
         assert await memory_backend.get("key1") == "value1"
         assert await memory_backend.get("key3") == "value3"
@@ -139,7 +139,7 @@ class TestRedisBackend:
         assert args[1] == 60
         # The third argument is the serialized value, which is a string
         assert isinstance(args[2], str)
-        
+
         # Test error handling
         mock_redis.setex.side_effect = RedisError("Redis error")
         # Should not raise exception
@@ -150,7 +150,7 @@ class TestRedisBackend:
         """Test deleting a key."""
         await redis_backend.delete("test_key")
         mock_redis.delete.assert_called_once_with("test_key")
-        
+
         # Test error handling
         mock_redis.delete.side_effect = RedisError("Redis error")
         # Should not raise exception
@@ -161,7 +161,7 @@ class TestRedisBackend:
         """Test clearing all keys."""
         await redis_backend.clear()
         mock_redis.flushdb.assert_called_once()
-        
+
         # Test error handling
         mock_redis.flushdb.side_effect = RedisError("Redis error")
         # Should not raise exception
@@ -172,7 +172,7 @@ class TestRedisBackend:
         """Test closing the Redis connection."""
         await redis_backend.close()
         mock_redis.aclose.assert_called_once()
-        
+
         # Test error handling
         mock_redis.aclose.side_effect = RedisError("Redis error")
         # Should not raise exception
@@ -204,25 +204,23 @@ class TestCache:
             mock_settings.REDIS_HOST = "localhost"
             mock_settings.REDIS_PORT = 6379
             mock_settings.REDIS_DB = 0
-            
+
             mock_instance = MagicMock()
             mock_redis_backend.return_value = mock_instance
-            
+
             cache = Cache()
             assert cache._backend == mock_instance
-            mock_redis_backend.assert_called_once_with(
-                host="localhost", port=6379, db=0
-            )
+            mock_redis_backend.assert_called_once_with(host="localhost", port=6379, db=0)
 
     @pytest.mark.asyncio
     async def test_aget(self):
         """Test that aget delegates to backend.get."""
         mock_backend = MagicMock(spec=CacheBackend)
         mock_backend.get.return_value = "test_value"
-        
+
         cache = Cache()
         cache._backend = mock_backend
-        
+
         result = await cache.aget("test_key")
         assert result == "test_value"
         mock_backend.get.assert_called_once_with("test_key")
@@ -231,13 +229,13 @@ class TestCache:
     async def test_aset(self):
         """Test that aset delegates to backend.set with correct TTL."""
         mock_backend = MagicMock(spec=CacheBackend)
-        
+
         cache = Cache(ttl_seconds=120)
         cache._backend = mock_backend
-        
+
         await cache.aset("test_key", "test_value")
         mock_backend.set.assert_called_once_with("test_key", "test_value", 120)
-        
+
         # Test with custom TTL
         mock_backend.reset_mock()
         await cache.aset("test_key", "test_value", ttl=60)
@@ -247,10 +245,10 @@ class TestCache:
     async def test_adelete(self):
         """Test that adelete delegates to backend.delete."""
         mock_backend = MagicMock(spec=CacheBackend)
-        
+
         cache = Cache()
         cache._backend = mock_backend
-        
+
         await cache.adelete("test_key")
         mock_backend.delete.assert_called_once_with("test_key")
 
@@ -258,10 +256,10 @@ class TestCache:
     async def test_aclear(self):
         """Test that aclear delegates to backend.clear."""
         mock_backend = MagicMock(spec=CacheBackend)
-        
+
         cache = Cache()
         cache._backend = mock_backend
-        
+
         await cache.aclear()
         mock_backend.clear.assert_called_once()
 
@@ -269,10 +267,10 @@ class TestCache:
     async def test_aclose(self):
         """Test that aclose delegates to backend.close."""
         mock_backend = MagicMock(spec=CacheBackend)
-        
+
         cache = Cache()
         cache._backend = mock_backend
-        
+
         await cache.aclose()
         mock_backend.close.assert_called_once()
 
@@ -280,11 +278,11 @@ class TestCache:
     async def test_async_context_manager(self):
         """Test that Cache works as an async context manager."""
         mock_backend = MagicMock(spec=CacheBackend)
-        
+
         cache = Cache()
         cache._backend = mock_backend
-        
+
         async with cache as c:
             assert c == cache
-        
+
         mock_backend.close.assert_called_once()

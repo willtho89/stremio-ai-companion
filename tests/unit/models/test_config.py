@@ -19,7 +19,6 @@ class TestConfig:
             model_name="openrouter/horizon-beta:online",
             tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
             max_results=20,
-            include_adult=False,
             use_posterdb=False,
             posterdb_api_key=None,
         )
@@ -29,7 +28,6 @@ class TestConfig:
         assert config.model_name == "openrouter/horizon-beta:online"
         assert config.tmdb_read_access_token == "eyJhbGciOiJIUzI1NiJ9.test1234567890"
         assert config.max_results == 20
-        assert config.include_adult is False
         assert config.use_posterdb is False
         assert config.posterdb_api_key is None
 
@@ -43,7 +41,6 @@ class TestConfig:
         assert config.openai_base_url == "https://openrouter.ai/api/v1"
         assert config.model_name == "openrouter/horizon-beta:online"
         assert config.max_results == 20
-        assert config.include_adult is False
         assert config.use_posterdb is False
         assert config.posterdb_api_key is None
 

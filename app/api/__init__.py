@@ -1,19 +1,19 @@
 """
 API routes for the Stremio AI Companion application.
 """
+
 from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.templating import Jinja2Templates
 from starlette.staticfiles import StaticFiles
 
+from app import __version__
 from app.api.stremio import router as stremio_router
 from app.api.web import router as web_router
 from app.core.logging import logger
-from app import __version__
-
+from app.services.cache import CACHE_INSTANCE
 
 
 @asynccontextmanager
@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Redis not configured; using LRU cache")
     yield
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -77,6 +78,3 @@ async def log_requests(request: Request, call_next):
 # Include routers
 app.include_router(web_router)
 app.include_router(stremio_router)
-
-# Startup event: initialize Redis connection
-from app.services.cache import Cache, CACHE_INSTANCE

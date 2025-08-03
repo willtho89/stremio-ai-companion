@@ -80,8 +80,8 @@ async def configure_page(request: Request, config: Optional[str] = Query(None)):
     )
 
 
-@router.get("/config/{config}/preview", response_class=HTMLResponse)
-async def preview_page(request: Request, config: str):
+@router.get("/config/{config}/adult/{adult}/preview", response_class=HTMLResponse)
+async def preview_page(request: Request, config: str, adult: int):
     """
     Render the preview page with configuration details and manifest URL.
     """
@@ -91,13 +91,13 @@ async def preview_page(request: Request, config: str):
         scheme = get_request_scheme(request)
 
         # Build manifest URLs for all types
-        base_url = f"{scheme}://{request.url.netloc}/config/{config}"
+        adult_flag = 1 if adult else 0
+        base_url = f"{scheme}://{request.url.netloc}/config/{config}/adult/{adult_flag}"
         manifest_urls = {
             "combined": f"{base_url}/manifest.json",
             "movie": f"{base_url}/movie/manifest.json",
             "series": f"{base_url}/series/manifest.json",
         }
-
         return templates.TemplateResponse(
             "preview.html",
             {
@@ -148,7 +148,6 @@ async def save_config(
             model_name=model_name,
             tmdb_read_access_token=tmdb_read_access_token,
             max_results=max_results,
-            include_adult=include_adult_bool,
             use_posterdb=use_posterdb_bool,
             posterdb_api_key=posterdb_api_key if posterdb_api_key else None,
         )
@@ -157,17 +156,17 @@ async def save_config(
         scheme = get_request_scheme(request)
 
         # Build manifest URLs for all types
-        base_url = f"{scheme}://{request.url.netloc}/config/{encrypted_config}"
+        adult_flag = 1 if include_adult_bool else 0
+        base_url = f"{scheme}://{request.url.netloc}/config/{encrypted_config}/adult/{adult_flag}"
         manifest_urls = {
             "combined": f"{base_url}/manifest.json",
             "movie": f"{base_url}/movie/manifest.json",
             "series": f"{base_url}/series/manifest.json",
         }
-
         return JSONResponse(
             {
                 "success": True,
-                "manifest_url": manifest_urls["combined"],  # Keep backward compatibility
+                "manifest_url": manifest_urls["combined"],
                 "manifest_urls": manifest_urls,
                 "preview_url": f"{base_url}/preview",
             }

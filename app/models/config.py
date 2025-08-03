@@ -24,7 +24,6 @@ class Config(BaseModel):
     model_name: str = ""
     tmdb_read_access_token: str = ""
     max_results: int = 20
-    include_adult: bool = False
     use_posterdb: bool = False
     posterdb_api_key: Optional[str] = None
 
