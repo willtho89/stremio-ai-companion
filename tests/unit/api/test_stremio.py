@@ -44,8 +44,15 @@ class TestStremioRouter:
         assert manifest["id"] == settings.STREMIO_ADDON_ID
         assert manifest["name"] == "AI Companion"
         assert manifest["types"] == ["movie", "series"]
-        assert len(manifest["catalogs"]) == 2
+        # Don't assert exact number of catalogs as it depends on ENABLE_FEED_CATALOGS
+        assert len(manifest["catalogs"]) >= 2
         assert isinstance(manifest["catalogs"], list)
+        
+        # Check that we have at least one movie and one series catalog
+        movie_catalogs = [c for c in manifest["catalogs"] if c["type"] == "movie"]
+        series_catalogs = [c for c in manifest["catalogs"] if c["type"] == "series"]
+        assert len(movie_catalogs) >= 1
+        assert len(series_catalogs) >= 1
 
     def test_get_manifest_invalid_config(self, client, mock_encryption_service):
         """Test the manifest endpoint with an invalid config."""
@@ -72,8 +79,11 @@ class TestStremioRouter:
         assert manifest["id"] == f"{settings.STREMIO_ADDON_ID}-movie"
         assert manifest["name"] == "AI Movie Companion"
         assert manifest["types"] == ["movie"]
-        assert len(manifest["catalogs"]) == 1
-        assert manifest["catalogs"][0]["type"] == "movie"
+        # Don't assert exact number of catalogs as it depends on ENABLE_FEED_CATALOGS
+        assert len(manifest["catalogs"]) >= 1
+        # Check that all catalogs are movie type
+        for catalog in manifest["catalogs"]:
+            assert catalog["type"] == "movie"
 
     def test_get_series_manifest(self, client, mock_encryption_service):
         """Test the dedicated series manifest endpoint."""
@@ -90,8 +100,11 @@ class TestStremioRouter:
         assert manifest["id"] == f"{settings.STREMIO_ADDON_ID}-series"
         assert manifest["name"] == "AI Series Companion"
         assert manifest["types"] == ["series"]
-        assert len(manifest["catalogs"]) == 1
-        assert manifest["catalogs"][0]["type"] == "series"
+        # Don't assert exact number of catalogs as it depends on ENABLE_FEED_CATALOGS
+        assert len(manifest["catalogs"]) >= 1
+        # Check that all catalogs are series type
+        for catalog in manifest["catalogs"]:
+            assert catalog["type"] == "series"
 
     def test_get_movie_manifest_invalid_config(self, client, mock_encryption_service):
         """Test the movie manifest endpoint with invalid config."""
@@ -119,7 +132,8 @@ class TestStremioRouter:
         )
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
-        response = client.get("/config/encrypted_config/movie/catalog/movie/test_catalog.json")
+        # Use a valid catalog ID from CATALOG_PROMPTS
+        response = client.get("/config/encrypted_config/catalog/movie/trending_movie.json")
 
         assert response.status_code == 200
         data = response.json()
@@ -133,7 +147,8 @@ class TestStremioRouter:
         )
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
-        response = client.get("/config/encrypted_config/series/catalog/series/test_catalog.json")
+        # Use a valid catalog ID from CATALOG_PROMPTS
+        response = client.get("/config/encrypted_config/catalog/series/trending_series.json")
 
         assert response.status_code == 200
         data = response.json()

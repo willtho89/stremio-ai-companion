@@ -9,8 +9,10 @@ from app.core.config import settings
 
 try:
     import redis.asyncio as aioredis  # type: ignore
+    from redis.exceptions import RedisError
 except ImportError:  # pragma: no cover
     aioredis = None
+    RedisError = Exception
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +70,7 @@ class RedisBackend(CacheBackend):
             if value is None:
                 return None
             return json.loads(value)
-        except (aioredis.RedisError, json.JSONDecodeError) as e:
+        except (RedisError, json.JSONDecodeError) as e:
             logger.warning(f"Redis get error for key '{key}': {e}")
             return None
     
@@ -76,25 +78,25 @@ class RedisBackend(CacheBackend):
         try:
             serialized = json.dumps(value, default=str)
             await self._redis.setex(key, ttl, serialized)
-        except (aioredis.RedisError, TypeError, ValueError) as e:
+        except (RedisError, TypeError, ValueError) as e:
             logger.warning(f"Redis set error for key '{key}': {e}")
     
     async def delete(self, key: str) -> None:
         try:
             await self._redis.delete(key)
-        except aioredis.RedisError as e:
+        except RedisError as e:
             logger.warning(f"Redis delete error for key '{key}': {e}")
     
     async def clear(self) -> None:
         try:
             await self._redis.flushdb()
-        except aioredis.RedisError as e:
+        except RedisError as e:
             logger.warning(f"Redis clear error: {e}")
     
     async def close(self) -> None:
         try:
             await self._redis.aclose()
-        except aioredis.RedisError as e:
+        except RedisError as e:
             logger.warning(f"Redis close error: {e}")
 
 
