@@ -328,7 +328,16 @@ async def _cached_catalog(
     Cached version of the catalogue view with pagination support (Redis only).
     """
     cache = CACHE_INSTANCE
-    prompt = CATALOG_PROMPTS.get(catalog_id, CATALOG_PROMPTS["trending"])["prompt"]
+    catalog_config = CATALOG_PROMPTS.get(catalog_id, CATALOG_PROMPTS["trending"])
+    prompt = catalog_config["prompt"]
+
+    # Get TTL for this specific catalog
+    catalog_ttl = catalog_config.get("cache_ttl")
+    if callable(catalog_ttl):
+        catalog_ttl = catalog_ttl()  # Call function to get dynamic TTL
+    elif catalog_ttl is None:
+        catalog_ttl = cache.ttl  # Use default cache TTL
+
     key = f"catalog:{catalog_id}{':adult' if include_adult else ''}"
 
     # Pagination only works with Redis cache
@@ -353,7 +362,7 @@ async def _cached_catalog(
             include_adult,
             max_results=settings.MAX_CATALOG_RESULTS,
         )
-        await cache.aset(key, result)
+        await cache.aset(key, result, catalog_ttl)
         result_names = [meta.get("name", "Unknown") for meta in result["metas"]]
         logger.info(f"LRU Cache: Returning {len(result['metas'])} items for skip={skip}: {result_names}")
         return result
@@ -372,10 +381,10 @@ async def _cached_catalog(
     # Check if we have enough entries to satisfy the request
     total_entries = len(cached_entries["metas"])
 
-    if adjusted_skip < total_entries and total_entries > max(settings.MAX_CATALOG_RESULTS / 4, 30):
+    # 0 < 34 and 34 > 30
+    if adjusted_skip < total_entries and total_entries > max(settings.MAX_CATALOG_ENTRIES / 4, 30):
         # Return existing entries from cache
-        end_index = min(adjusted_skip + settings.MAX_CATALOG_RESULTS, total_entries)
-        result_metas = cached_entries["metas"][adjusted_skip:end_index]
+        result_metas = cached_entries["metas"]
         result_names = [meta.get("name", "Unknown") for meta in result_metas]
         logger.info(
             f"Redis Cache: Returning {len(result_metas)} cached items for skip={skip} (adjusted to {adjusted_skip}): {result_names}"
@@ -423,7 +432,7 @@ async def _cached_catalog(
 
     # Update cache with new entries (only possible with Redis)
     cached_entries["metas"].extend(new_metas)
-    await cache.aset(key, cached_entries)
+    await cache.aset(key, cached_entries, catalog_ttl)
 
     logger.info(f"Added {len(new_metas)} new entries, total now: {len(cached_entries['metas'])}")
 
