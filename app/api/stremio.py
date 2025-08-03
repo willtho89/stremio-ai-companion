@@ -6,6 +6,7 @@ import asyncio
 import json
 import time
 from functools import lru_cache, wraps
+from app.services.cache import Cache, make_timed_lru, CACHE_INSTANCE
 
 from fastapi import APIRouter, HTTPException
 from typing import Optional, List
@@ -13,6 +14,7 @@ from typing import Optional, List
 from app.core.logging import logger
 from app.models.config import Config
 from app.services.encryption import encryption_service
+from app.services import CATALOG_PROMPTS
 from app.services.llm import LLMService
 from app.services.rpdb import RPDBService
 from app.services.tmdb import TMDBService
@@ -139,7 +141,7 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
         name = "AI Companion"
         description = "Your AI-powered movie discovery companion"
 
-    # Build catalogs for specified types
+    # Build catalogs for specified types using predefined prompts, plus optional feed catalogs
     catalogs = []
     for content_type in types:
         if content_type == "movie":
@@ -151,6 +153,16 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
                     "extra": [{"name": "search", "isRequired": True}],
                 }
             )
+            if settings.ENABLE_FEED_CATALOGS:
+                for cid, cfg in CATALOG_PROMPTS.items():
+                    catalogs.append(
+                        {
+                            "type": "movie",
+                            "id": f"{cid}_movie",
+                            "name": cfg["title"],
+                            "extra": [{"name": "search", "isRequired": False}],
+                        }
+                    )
         elif content_type == "series":
             catalogs.append(
                 {
@@ -160,6 +172,16 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
                     "extra": [{"name": "search", "isRequired": True}],
                 }
             )
+            if settings.ENABLE_FEED_CATALOGS:
+                for cid, cfg in CATALOG_PROMPTS.items():
+                    catalogs.append(
+                        {
+                            "type": "series",
+                            "id": f"{cid}_series",
+                            "name": cfg["title"],
+                            "extra": [{"name": "search", "isRequired": False}],
+                        }
+                    )
 
     return {
         "id": addon_id,
@@ -297,19 +319,29 @@ async def _process_catalog_request(config: str, search: str, content_type: Conte
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@timed_lru_cache(seconds=14400)  # 4 hours
-async def _cached_catalog(config: str, content_type: ContentType):
+async def _cached_catalog(config: str, content_type: ContentType, catalog_id: str | None = None):
     """
     Cached version of the catalogue view.
     """
+    cache = CACHE_INSTANCE
+    prompt = CATALOG_PROMPTS.get(catalog_id, CATALOG_PROMPTS["trending"])["prompt"]
+    key = f"catalog:{catalog_id}:{settings.MAX_CATALOG_RESULTS}:{hash(config)}"
 
-    # NOTE caching does not work too well in a uvicorn setting with multiple workers…
-    return await _process_catalog_request(
+    cached = await cache.aget(key)
+    if cached is not None:
+        logger.info(f"Cache hit for key={key}")
+        return cached
+    logger.info(f"Cache miss for key={key}")
+    result = await _process_catalog_request(
         config,
-        "Give me your current must watches which are available to stream right now",
+        prompt,
         content_type,
         max_results=settings.MAX_CATALOG_RESULTS,
     )
+    await cache.aset(key, result)
+    return result
+
+
 
 
 @router.get("/config/{config}/catalog/{content_type}/{catalog_id}.json")
@@ -320,7 +352,7 @@ async def get_catalog(config: str, content_type: ContentType, catalog_id: str):
     This endpoint is called by Stremio to get movie metadata based on a search query.
     """
 
-    return await _cached_catalog(config, content_type)
+    return await _cached_catalog(config, content_type, catalog_id)
 
 
 @router.get("/config/{config}/catalog/{content_type}/{catalog_id}/search={search}.json")
@@ -332,37 +364,3 @@ async def get_catalog_search(config: str, content_type: ContentType, catalog_id:
     """
     # Always use the non-cached version for explicit searches
     return await _process_catalog_request(config, search, content_type)
-
-
-# New routes for split manifests - movie catalog routes
-@router.get("/config/{config}/movie/catalog/movie/{catalog_id}.json")
-async def get_movie_catalog(config: str, catalog_id: str):
-    """
-    Movie-specific catalog endpoint for the movies-only addon.
-    """
-    return await _cached_catalog(config, ContentType.MOVIE)
-
-
-@router.get("/config/{config}/movie/catalog/movie/{catalog_id}/search={search}.json")
-async def get_movie_catalog_search(config: str, catalog_id: str, search: str):
-    """
-    Movie-specific catalog search endpoint for the movies-only addon.
-    """
-    return await _process_catalog_request(config, search, ContentType.MOVIE)
-
-
-# New routes for split manifests - series catalog routes
-@router.get("/config/{config}/series/catalog/series/{catalog_id}.json")
-async def get_series_catalog(config: str, catalog_id: str):
-    """
-    Series-specific catalog endpoint for the series-only addon.
-    """
-    return await _cached_catalog(config, ContentType.SERIES)
-
-
-@router.get("/config/{config}/series/catalog/series/{catalog_id}/search={search}.json")
-async def get_series_catalog_search(config: str, catalog_id: str, search: str):
-    """
-    Series-specific catalog search endpoint for the series-only addon.
-    """
-    return await _process_catalog_request(config, search, ContentType.SERIES)

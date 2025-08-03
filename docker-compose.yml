@@ -2,12 +2,21 @@ version: '3.8'
 
 services:
   stremio-ai-companion:
-    image: ghcr.io/willtho89/stremio-ai-companion:latest
+    # image: ghcr.io/willtho89/stremio-ai-companion:latest
+    build: .
     ports:
       - "8000:8000"
     environment:
-      - ENCRYPTION_KEY=${STREMIO_AI_ENCRYPTION_KEY:-stremio-ai-companion-default-key}
-      - UVICORN_WORKERS=${UVICORN_WORKERS:-0}  # 0 means auto-detect based on CPU cores
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-stremio-ai-companion-default-key}
+      - UVICORN_WORKERS=${UVICORN_WORKERS:-0}
+      - ENABLE_FEED_CATALOGS=${ENABLE_FEED_CATALOGS:-true}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-openrouter/horizon-beta:online}
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
+      - RPDB_API_KEY=${RPDB_API_KEY:-}
+    depends_on:
+      - redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/', timeout=10)"]
@@ -15,3 +24,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped

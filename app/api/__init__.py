@@ -1,7 +1,7 @@
 """
 API routes for the Stremio AI Companion application.
 """
-
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, Request
@@ -14,11 +14,27 @@ from app.api.web import router as web_router
 from app.core.logging import logger
 from app import __version__
 
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    cache = CACHE_INSTANCE
+    if cache.is_redis():
+        try:
+            await cache._redis.ping()  # type: ignore
+            logger.info("Connected to Redis on startup")
+        except Exception:
+            logger.warning("Redis configured but unreachable on startup; falling back to LRU")
+    else:
+        logger.info("Redis not configured; using LRU cache")
+    yield
+
 # Create FastAPI app
 app = FastAPI(
     title="Stremio AI Companion",
     description="Your AI-powered movie discovery companion for Stremio",
     version=__version__,
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -61,3 +77,6 @@ async def log_requests(request: Request, call_next):
 # Include routers
 app.include_router(web_router)
 app.include_router(stremio_router)
+
+# Startup event: initialize Redis connection
+from app.services.cache import Cache, CACHE_INSTANCE

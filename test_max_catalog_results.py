@@ -23,7 +23,7 @@ async def test_max_catalog_results():
     # Call _cached_catalog and check if it uses the correct MAX_CATALOG_RESULTS value
     try:
         # This will fail because we're using a mock config, but we can check the log output
-        await _cached_catalog(mock_config, ContentType.MOVIE)
+        await _cached_catalog(mock_config, ContentType.MOVIE, request=None)
     except Exception as e:
         # We expect an exception because we're using a mock config
         logger.info(f"Expected exception: {e}")

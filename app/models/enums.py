@@ -6,3 +6,9 @@ class ContentType(str, Enum):
 
     MOVIE = "movie"
     SERIES = "series"
+
+
+class CatalogId(str, Enum):
+    """Predefined catalog identifiers."""
+
+    TRENDING = "trending"

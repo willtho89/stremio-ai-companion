@@ -94,26 +94,37 @@ ENCRYPTION_KEY=replace-this-key
 OPENAI_API_KEY=your-openai-key
 TMDB_API_KEY=your-tmdb-key
 RPDB_API_KEY=optional
+# Optional features
+ENABLE_FEED_CATALOGS=true
+# Redis (optional). If set, enables shared caching
+# or use discrete host settings
+# REDIS_HOST=redis
+# REDIS_PORT=6379
+# REDIS_DB=0
 ```
 
 ---
 
 ## ⚙️ Environment Variables
 
-| Variable               | Description                                | Default                          |
-|------------------------|--------------------------------------------|----------------------------------|
-| ENCRYPTION_KEY         | AES-256 encryption key (required)          | —                                |
-| OPENAI_API_KEY         | OpenAI or OpenRouter key                   | —                                |
-| OPENAI_BASE_URL        | AI model gateway URL                       | https://openrouter.ai/api/v1     |
-| DEFAULT_MODEL          | e.g. openrouter/horizon-beta:online        | openrouter/horizon-beta:online   |
-| TMDB_API_KEY           | TMDB token                                 | —                                |
-| RPDB_API_KEY           | RPDB artwork key (optional)                | —                                |
-| MAX_CATALOG_RESULTS    | Search result cap                          | 50                               |
-| SPLIT_MANIFESTS        | Enable movies-only/series-only manifests   | false                            |
-| FOOTER_ENABLED         | Show footer in web interfaces              | true                             |
-| HOST                   | Server bind host                           | 0.0.0.0                          |
-| PORT                   | Server port                                | 8000                             |
-| UVICORN_WORKERS        | Uvicorn worker count (0 = auto)            | 0                                |
+| Variable               | Description                                | Default                        |
+|------------------------|--------------------------------------------|--------------------------------|
+| ENCRYPTION_KEY         | AES-256 encryption key (required)          | —                              |
+| OPENAI_API_KEY         | OpenAI or OpenRouter key                   | —                              |
+| OPENAI_BASE_URL        | AI model gateway URL                       | https://openrouter.ai/api/v1   |
+| DEFAULT_MODEL          | e.g. openrouter/horizon-beta:online        | openrouter/horizon-beta:online |
+| TMDB_API_KEY           | TMDB token                                 | —                              |
+| RPDB_API_KEY           | RPDB artwork key (optional)                | —                              |
+| MAX_CATALOG_RESULTS    | Search result cap                          | 50                             |
+| SPLIT_MANIFESTS        | Enable movies-only/series-only manifests   | false                          |
+| FOOTER_ENABLED         | Show footer in web interfaces              | true                           |
+| HOST                   | Server bind host                           | 0.0.0.0                        |
+| PORT                   | Server port                                | 8000                           |
+| UVICORN_WORKERS        | Uvicorn worker count (0 = auto)            | 0                              |
+| ENABLE_FEED_CATALOGS   | Expose predefined AI-curated catalogs       | true                           |
+| REDIS_HOST             | Redis host (if no URL)                      | redis                          |
+| REDIS_PORT             | Redis port                                  | 6379                           |
+| REDIS_DB               | Redis database index                        | 0                              |
 
 ---
 

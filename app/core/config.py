@@ -44,10 +44,14 @@ class Settings(BaseSettings):
     RPDB_API_KEY: str | None = Field(default=None)
 
     # Catalog settings
-    MAX_CATALOG_RESULTS: int = Field(default=50, description="Maximum number of results to return in cached catalog")
+    MAX_CATALOG_RESULTS: int = Field(default=10, description="Maximum number of results to return in cached catalog")
 
     # Manifest settings
     SPLIT_MANIFESTS: bool = Field(default=False, description="Enable split manifests for movie/series types")
+    ENABLE_FEED_CATALOGS: bool = Field(default=True, description="Expose predefined feed catalogs in manifest")
+    REDIS_HOST: str | None = Field(default=None, description="Redis host if URL not provided")
+    REDIS_PORT: int = Field(default=6379, description="Redis port")
+    REDIS_DB: int = Field(default=0, description="Redis DB index")
 
     # Customizing
     FOOTER_ENABLED: bool = Field(default=True, description="Show footer on pages")
@@ -60,7 +64,7 @@ class TestSettings(Settings):
 
     FOOTER_ENABLED: bool = Field(default=True)
 
-    model_config = SettingsConfigDict(extra="ignore")
+    model_config = SettingsConfigDict(extra="ignore", env_file=None)
 
     # Override required field with test default
     ENCRYPTION_KEY: str = Field(default="test-encryption-key-for-testing")
