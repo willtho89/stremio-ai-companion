@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.4]
+
+### Fixed
+- removed behavior which led to an infinite loop
+
 ## [0.7.3]
 
 ### Added

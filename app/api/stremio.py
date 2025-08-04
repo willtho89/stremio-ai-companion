@@ -199,11 +199,6 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
         "resources": ["catalog"],
         "types": types,
         "catalogs": catalogs,
-        "behaviorHints": {
-            "configurable": True,
-            "configurationRequired": True,
-            "searchable": True,
-        },
     }
 
 
