@@ -53,6 +53,12 @@ All notable changes to this project will be documented in this file.
 ## [0.5.3]
 
 ### Changed
+- CI/CD complete refactor
+- Better Prompting
+
+## [0.5.3]
+
+### Changed
 - Configure: Auto-fetch models on first focus with spinner and keep placeholder selected until user chooses
 
 ## [0.5.2]
