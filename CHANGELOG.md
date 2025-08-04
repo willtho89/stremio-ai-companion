@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0]
+
+Easier initial setup with builtin support for Openrouter, Gemini, OpenAI and Anthropic models
+
+### Added
+- Gzip compression for responses
+
+### Changed
+- Refactor Configure page for easier support of multiple model providers
+- Refactor Prompt handling (inspired by stremio-ai-search)
+- Nicer error message on wrong API key
+- General refactoring and duplicate removal
+
 ## [0.3.6]
 
 ### Changed
