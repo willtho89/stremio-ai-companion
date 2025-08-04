@@ -1,0 +1,26 @@
+# Code Owners
+# These owners will be the default owners for everything in the repo
+
+* @willtho89
+
+# GitHub workflows
+/.github/ @willtho89
+
+# Core application code
+/app/api/ @willtho89
+/app/core/ @willtho89
+/app/models/ @willtho89
+/app/services/ @willtho89
+
+# Tests
+/tests/ @willtho89
+
+# Documentation
+*.md @willtho89
+/docs/ @willtho89
+
+# Dependencies and configuration
+requirements*.txt @willtho89
+pyproject.toml @willtho89
+Dockerfile @willtho89
+docker-compose.yml @willtho89

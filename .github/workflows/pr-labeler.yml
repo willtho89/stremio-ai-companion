@@ -1,0 +1,26 @@
+name: PR Labeler
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: Label PR
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Label PR based on paths
+      uses: actions/labeler@v5
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        configuration-path: .github/labeler.yml
+
+    - name: Label PR based on branch name
+      uses: ffittschen/pr-branch-labeler@v1
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"

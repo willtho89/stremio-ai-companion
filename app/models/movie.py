@@ -14,10 +14,6 @@ class MovieSuggestion(BaseModel):
 
     title: str = Field(description="The movie title without year")
     year: int = Field(description="The release year of the movie")
-    streaming_platform: Optional[str] = Field(
-        default=None, description="Primary streaming platform if known (e.g., Netflix, Prime Video, Hulu)"
-    )
-    note: Optional[str] = Field(default=None, description="Additional context like 'New this week' or 'Trending'")
 
 
 class TVSeriesSuggestion(BaseModel):
@@ -27,10 +23,6 @@ class TVSeriesSuggestion(BaseModel):
 
     title: str = Field(description="The TV series title without year")
     year: int = Field(description="The first air year of the series")
-    streaming_platform: Optional[str] = Field(
-        default=None, description="Primary streaming platform if known (e.g., Netflix, Prime Video, Hulu)"
-    )
-    note: Optional[str] = Field(default=None, description="Additional context like 'New season' or 'Limited series'")
 
 
 class MovieSuggestions(BaseModel):
