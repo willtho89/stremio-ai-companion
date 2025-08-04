@@ -1,5 +1,7 @@
-# Stremio AI Companion
+# Stremio AI Companion 
 
+[![CI](https://github.com/willtho89/stremio-ai-companion/actions/workflows/ci.yml/badge.svg)](https://github.com/willtho89/stremio-ai-companion/actions/workflows/ci.yml) [![CD](https://github.com/willtho89/stremio-ai-companion/actions/workflows/cd.yml/badge.svg)](https://github.com/willtho89/stremio-ai-companion/actions/workflows/cd.yml) [![Security](https://github.com/willtho89/stremio-ai-companion/actions/workflows/security.yml/badge.svg)](https://github.com/willtho89/stremio-ai-companion/actions/workflows/security.yml)
+---
 🎬 Your AI-powered movie and tv series discovery companion for Stremio — powered by advanced natural language understanding using OpenAI compatible APIs. Discover perfect films using intelligent recommendations and (soon) AI-curated collections.
 
 ![Demo Screenshot](.assets/stremio-ai-companion.gif)
