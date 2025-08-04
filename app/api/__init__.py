@@ -7,6 +7,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.staticfiles import StaticFiles
 
 from app import __version__
@@ -49,6 +50,8 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="./.assets"), name="static")
 
+app.add_middleware(GZipMiddleware, compresslevel=9)
+
 
 # Add request logging middleware
 @app.middleware("http")
@@ -68,7 +71,7 @@ async def log_requests(request: Request, call_next):
         safe_url = f"{base}/config/{masked}"
     else:
         safe_url = url_str
-    logger.debug(f"{request.method} {safe_url}")
+    logger.info(f"{request.method} {safe_url}")
     response = await call_next(request)
     duration = datetime.now() - start_time
     logger.info(f"Response: {response.status_code} - Duration: {duration.total_seconds()}s")
