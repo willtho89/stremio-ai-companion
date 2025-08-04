@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [0.7.5]
 
 ### Added
+- slugify for search cache key
+
+## [0.7.5]
+
+### Added
 - Configuration validation on save: tests LLM, TMDB, and RPDB connections
 - Meaningful error messages for configuration validation failures
 

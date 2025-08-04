@@ -9,6 +9,7 @@ from functools import lru_cache, wraps
 from typing import Optional, List, Union
 
 from fastapi import APIRouter, HTTPException
+from slugify import slugify
 
 from app.core.config import settings
 from app.core.logging import logger
@@ -287,9 +288,9 @@ async def _process_catalog_request(
         cache = CACHE_INSTANCE
         if cache_time_seconds is not None:
             try:
-                cleaned = "".join(search.lower().split()) if search else None
+                cleaned = slugify(search, separator="")
                 if cleaned:
-                    key = f"search:{content_type.value}:{'adult' if include_adult else 'safe'}:{cleaned}"
+                    key = f"search:{content_type.value}{':adult' if include_adult else ''}:{cleaned}"
             except Exception:
                 key = None
 
@@ -397,15 +398,14 @@ async def _cached_catalog(
 
     # Get existing cached entries
     cached_entries = await cache.aget(key)
+    # Check if we have enough entries to satisfy the request
     if cached_entries is None or len(cached_entries["metas"]) == 0:
         cached_entries = {"metas": []}
         logger.debug(f"Cache miss for key={key}")
     else:
         logger.debug(f"Cache hit for key={key}, found {len(cached_entries['metas'])} existing entries")
 
-    # Check if we have enough entries to satisfy the request
     total_entries = len(cached_entries["metas"])
-
     # Already at max entries, return cached
     if total_entries >= settings.MAX_CATALOG_ENTRIES:
         logger.debug(f"Max catalog entries ({settings.MAX_CATALOG_ENTRIES}) reached for {catalog_id}")
