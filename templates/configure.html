@@ -168,29 +168,55 @@
         <form id="configForm">
             <div class="form-group">
                 <label for="openai_api_key">OpenAI API Key *</label>
-                <input type="password" id="openai_api_key" name="openai_api_key" required 
-                       placeholder="sk-..." value="{% if existing_config %}{{ existing_config.openai_api_key }}{% elif settings.OPENAI_API_KEY %}{{ settings.OPENAI_API_KEY }}{% endif %}">
+                <div style="position:relative;">
+                    <input type="password" id="openai_api_key" name="openai_api_key" required 
+                           placeholder="sk-..." value="{% if existing_config %}{{ existing_config.openai_api_key }}{% elif settings.OPENAI_API_KEY %}{{ settings.OPENAI_API_KEY }}{% endif %}" style="padding-right:2.5rem;">
+                    <button type="button" class="copy-btn" onclick="toggleVisibility('openai_api_key', this)" aria-label="Toggle visibility" style="position:absolute; right:0.5rem; top:5%; height:28px; display:flex; align-items:center; justify-content:center; padding:0 0.5rem; border-radius:6px; font-size:0.9rem; line-height:1;">👁️</button>
+                </div>
                 <div class="help-text">Your OpenAI API key for LLM movie suggestions</div>
             </div>
             
             <div class="form-group">
                 <label for="openai_base_url">OpenAI Base URL</label>
-                <input type="url" id="openai_base_url" name="openai_base_url" 
-                       value="{% if existing_config %}{{ existing_config.openai_base_url }}{% else %}{{ settings.OPENAI_BASE_URL }}{% endif %}" placeholder="{{ settings.OPENAI_BASE_URL }}">
-                <div class="help-text">Use custom endpoint for OpenAI-compatible APIs</div>
+                <select id="openai_base_url" name="openai_base_url">
+                    {% set current_base = existing_config.openai_base_url if existing_config else settings.OPENAI_BASE_URL %}
+                    {% set bases = {
+                        'https://openrouter.ai/api/v1': 'OpenRouter',
+                        'https://api.openai.com/v1': 'OpenAI',
+                        'https://api.anthropic.com/v1': 'Anthropic',
+                        'https://generativelanguage.googleapis.com/v1beta/openai/': 'Google Gemini (OpenAI Compatible)'
+                    } %}
+                    {% for url,label in bases.items() %}
+                    <option value="{{ url }}" {% if current_base == url %}selected{% endif %}>{{ label }} ({{ url }})</option>
+                    {% endfor %}
+                    <option value="custom" {% if current_base not in bases %}selected{% endif %}>Custom</option>
+                </select>
+                <div class="help-text">Select a provider or choose Custom to enter URL</div>
+                <input type="url" id="openai_base_url_custom" placeholder="Custom base URL (required for Custom)" value="{% if current_base not in bases %}{{ current_base }}{% endif %}" style="margin-top:0.5rem; display:{% if current_base not in bases %}block{% else %}none{% endif %};">
             </div>
             
             <div class="form-group">
-                <label for="model_name">Model Name</label>
-                <input type="text" id="model_name" name="model_name" 
-                       value="{% if existing_config %}{{ existing_config.model_name }}{% else %}{{ settings.DEFAULT_MODEL }}{% endif %}" placeholder="{{ settings.DEFAULT_MODEL }}">
-                <div class="help-text">OpenAI model to use for movie suggestions</div>
+                <label for="model_name">Model</label>
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                    <button type="button" id="fetch_models_btn" class="copy-btn">Fetch models</button>
+                    <label class="checkbox-group" style="margin:0; display:flex; align-items:center; gap:0.4rem;">
+                        <input type="checkbox" id="use_online_suffix">
+                        <span>Use online (OpenRouter only)</span>
+                    </label>
+                </div>
+                <select id="model_name" name="model_name" disabled style="width:100%;">
+                    <option value="" disabled selected>Fetch models to select…</option>
+                </select>
+                <div class="help-text">Searchable dropdown enabled after fetching models. You can still type a custom value.</div>
             </div>
             
             <div class="form-group">
                 <label for="tmdb_read_access_token">TMDB Read Access Token *</label>
-                <input type="password" id="tmdb_read_access_token" name="tmdb_read_access_token" required 
-                       placeholder="Your TMDB read access token" value="{% if existing_config %}{{ existing_config.tmdb_read_access_token }}{% elif settings.TMDB_READ_ACCESS_TOKEN %}{{ settings.TMDB_READ_ACCESS_TOKEN }}{% endif %}">
+                <div style="position:relative;">
+                    <input type="password" id="tmdb_read_access_token" name="tmdb_read_access_token" required 
+                           placeholder="Your TMDB read access token" value="{% if existing_config %}{{ existing_config.tmdb_read_access_token }}{% elif settings.TMDB_READ_ACCESS_TOKEN %}{{ settings.TMDB_READ_ACCESS_TOKEN }}{% endif %}" style="padding-right:2.5rem;">
+                    <button type="button" class="copy-btn" onclick="toggleVisibility('tmdb_read_access_token', this)" aria-label="Toggle visibility" style="position:absolute; right:0.5rem; top:5%; height:28px; display:flex; align-items:center; justify-content:center; padding:0 0.5rem; border-radius:6px; font-size:0.9rem; line-height:1;">👁️</button>
+                </div>
                 <div class="help-text">Get your free read access token from <a href="https://www.themoviedb.org/settings/api" target="_blank" style="color: rgba(255,255,255,0.8);">TMDB API Settings</a></div>
             </div>
             
@@ -220,8 +246,11 @@
             
             <div class="form-group" id="posterdb_key_group" style="{% if existing_config and existing_config.use_posterdb %}display: block;{% else %}display: none;{% endif %}">
                 <label for="posterdb_api_key">RPDB API Key</label>
-                <input type="password" id="posterdb_api_key" name="posterdb_api_key" 
-                       placeholder="Your RPDB API key" value="{% if existing_config and existing_config.posterdb_api_key %}{{ existing_config.posterdb_api_key }}{% elif settings.RPDB_API_KEY %}{{ settings.RPDB_API_KEY }}{% endif %}">
+                <div style="position:relative;">
+                    <input type="password" id="posterdb_api_key" name="posterdb_api_key" 
+                           placeholder="Your RPDB API key" value="{% if existing_config and existing_config.posterdb_api_key %}{{ existing_config.posterdb_api_key }}{% elif settings.RPDB_API_KEY %}{{ settings.RPDB_API_KEY }}{% endif %}" style="padding-right:2.5rem;">
+                    <button type="button" class="copy-btn" onclick="toggleVisibility('posterdb_api_key', this)" aria-label="Toggle visibility" style="position:absolute; right:0.5rem; top:5%; height:28px; display:flex; align-items:center; justify-content:center; padding:0 0.5rem; border-radius:6px; font-size:0.9rem; line-height:1;">👁️</button>
+                </div>
                 <div class="help-text">Optional: Enhanced movie posters from <a href="https://ratingposterdb.com" target="_blank" style="color: rgba(255,255,255,0.8);">RPDB</a></div>
             </div>
             
@@ -262,6 +291,28 @@
             result.style.display = 'none';
             errorDiv.style.display = 'none';
             
+            const baseSel = document.getElementById('openai_base_url');
+            const isOpenRouter = baseSel && baseSel.value === 'https://openrouter.ai/api/v1';
+            const useOnline = document.getElementById('use_online_suffix')?.checked;
+            const modelSel = document.getElementById('model_name');
+            let modelValue = '';
+            if (modelSel && modelSel.getAttribute('data-enhanced') === '1') {
+                const input = modelSel.previousSibling && modelSel.previousSibling.querySelector('input');
+                modelValue = input ? input.value.trim() : '';
+            } else if (modelSel) {
+                modelValue = (modelSel.value || '').trim();
+            }
+            if (isOpenRouter && useOnline && modelValue && !modelValue.endsWith(':online')) {
+                modelValue += ':online';
+            }
+            let existingHidden = this.querySelector('input[name="model_name"]');
+            if (existingHidden) existingHidden.remove();
+            const hiddenModel = document.createElement('input');
+            hiddenModel.type = 'hidden';
+            hiddenModel.name = 'model_name';
+            hiddenModel.value = modelValue || '';
+            this.appendChild(hiddenModel);
+            
             const formData = new FormData(this);
             
             try {
@@ -273,17 +324,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Update manifest URLs for the shared partial
-                    manifestUrls.combined = data.manifest_urls.combined;
-                    manifestUrls.movie = data.manifest_urls.movie;
-                    manifestUrls.series = data.manifest_urls.series;
-                    
-                    // Update the displayed URL
-                    updateManifestUrl();
-                    
-                    window.previewUrl = data.preview_url; // Store for button access
-                    result.className = 'result success';
-                    result.style.display = 'block';
+                    window.location.href = data.preview_url;
                 } else {
                     throw new Error(data.detail || 'Configuration failed');
                 }
@@ -316,8 +357,210 @@
             }
         }
 
+        function toggleVisibility(inputId, btn) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            if (el.type === 'password') {
+                el.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                el.type = 'password';
+                btn.textContent = '👁️';
+            }
+        }
 
-    </script>
+        
+        
+        
+            document.getElementById('openai_base_url').addEventListener('change', function() {
+                const custom = document.getElementById('openai_base_url_custom');
+                const useOnline = document.getElementById('use_online_suffix');
+                if (this.value === 'custom') {
+                    custom.style.display = 'block';
+                    if (useOnline) useOnline.parentElement.style.display = 'none';
+                } else {
+                    custom.style.display = 'none';
+                    custom.value = '';
+                    if (useOnline) useOnline.parentElement.style.display = (this.value === 'https://openrouter.ai/api/v1') ? 'flex' : 'none';
+                }
+            });
+
+            function resetSearchableSelect(select) {
+                if (select.getAttribute('data-enhanced') !== '1') return;
+                const wrapper = select.previousSibling;
+                if (wrapper && wrapper.querySelector && wrapper.querySelector('input')) {
+                    wrapper.remove();
+                }
+                select.style.display = '';
+                select.setAttribute('data-enhanced', '0');
+            }
+
+            (function initModelSelect() {
+                const sel = document.getElementById('model_name');
+                const initial = "{% if existing_config %}{{ existing_config.model_name }}{% else %}{{ settings.DEFAULT_MODEL }}{% endif %}";
+                if (sel && initial) {
+                    resetSearchableSelect(sel);
+                    sel.innerHTML = '';
+                    const opt = document.createElement('option');
+                    opt.value = initial;
+                    opt.textContent = initial;
+                    sel.appendChild(opt);
+                    sel.disabled = false;
+                    enhanceSearchableSelect(sel);
+                    const inp = sel.previousSibling && sel.previousSibling.querySelector('input');
+                    if (inp) inp.value = initial;
+                }
+                const baseSel = document.getElementById('openai_base_url');
+                const useOnline = document.getElementById('use_online_suffix');
+                if (useOnline && baseSel) {
+                    useOnline.parentElement.style.display = (baseSel.value === 'https://openrouter.ai/api/v1') ? 'flex' : 'none';
+                    const initialModel = initial || '';
+                    useOnline.checked = initialModel.endsWith(':online');
+                }
+            })();
+
+            document.getElementById('fetch_models_btn').addEventListener('click', async function() {
+                const apiKey = document.getElementById('openai_api_key').value.trim();
+                const baseSelect = document.getElementById('openai_base_url');
+                const customBase = document.getElementById('openai_base_url_custom').value.trim();
+                const baseUrl = baseSelect.value === 'custom' ? customBase : baseSelect.value;
+                if (!apiKey) return;
+                const btn = this;
+                btn.disabled = true;
+                btn.textContent = 'Fetching...';
+                try {
+                    const url = baseUrl.replace(/\/$/, '') + '/models';
+                    const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+                    const data = await resp.json();
+                    if (!resp.ok) throw new Error((data && (data.error || data.message)) || 'Failed to fetch models');
+                    const select = document.getElementById('model_name');
+                    const prevValue = (() => {
+                        if (select.getAttribute('data-enhanced') === '1') {
+                            const inp = select.previousSibling && select.previousSibling.querySelector('input');
+                            return inp ? inp.value : '';
+                        }
+                        return select.value || '';
+                    })();
+                    resetSearchableSelect(select);
+                    select.innerHTML = '';
+                    let models = [];
+                    if (Array.isArray(data)) models = data;
+                    else if (Array.isArray(data.data)) models = data.data;
+                    else if (Array.isArray(data.models)) models = data.models;
+                    const unique = Array.from(new Set(models.map(m => typeof m === 'string' ? m : (m.id || m.name)).filter(Boolean)));
+                    if (!unique.length) throw new Error('No models found');
+                    unique.forEach(id => {
+                        const opt = document.createElement('option');
+                        opt.value = id;
+                        opt.textContent = id;
+                        if (id === prevValue) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                    if (prevValue && !unique.includes(prevValue)) {
+                        const customOpt = document.createElement('option');
+                        customOpt.value = prevValue;
+                        customOpt.textContent = prevValue + ' (custom)';
+                        customOpt.selected = true;
+                        select.insertBefore(customOpt, select.firstChild);
+                    }
+                    select.disabled = false;
+                    enhanceSearchableSelect(select);
+                    const inp = select.previousSibling && select.previousSibling.querySelector('input');
+                    if (inp) inp.value = prevValue || select.value;
+                } catch (e) {
+                    alert(e.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Fetch models';
+                }
+            });
+
+            document.getElementById('configForm').addEventListener('submit', function() {
+                const select = document.getElementById('openai_base_url');
+                const customBase = document.getElementById('openai_base_url_custom').value.trim();
+                if (select.value === 'custom') {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'openai_base_url';
+                    hidden.value = customBase;
+                    this.appendChild(hidden);
+                }
+                const modelSel = document.getElementById('model_name');
+                let modelValue = '';
+                if (modelSel && modelSel.getAttribute('data-enhanced') === '1') {
+                    const input = modelSel.previousSibling && modelSel.previousSibling.querySelector('input');
+                    modelValue = input ? input.value.trim() : '';
+                } else if (modelSel) {
+                    modelValue = (modelSel.value || '').trim();
+                }
+                const baseSelectEl = document.getElementById('openai_base_url');
+                const isOpenRouter = baseSelectEl && baseSelectEl.value === 'https://openrouter.ai/api/v1';
+                const useOnline = document.getElementById('use_online_suffix')?.checked;
+                if (isOpenRouter && useOnline && modelValue && !modelValue.endsWith(':online')) {
+                    modelValue = modelValue + ':online';
+                }
+                if (modelValue) {
+                    const hiddenModel = document.createElement('input');
+                    hiddenModel.type = 'hidden';
+                    hiddenModel.name = 'model_name';
+                    hiddenModel.value = modelValue;
+                    this.appendChild(hiddenModel);
+                }
+            });
+
+            function enhanceSearchableSelect(select) {
+                if (select.getAttribute('data-enhanced') === '1') return;
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = 'Search or type custom model…';
+                input.style.width = '100%';
+                input.style.padding = '0.75rem';
+                input.style.border = '2px solid rgba(255,255,255,0.2)';
+                input.style.borderRadius = '10px';
+                input.style.background = 'rgba(255,255,255,0.1)';
+                input.style.color = 'white';
+                input.style.fontSize = '1rem';
+                input.style.backdropFilter = 'blur(10px)';
+                const list = document.createElement('div');
+                list.style.position = 'absolute';
+                list.style.left = '0';
+                list.style.right = '0';
+                list.style.top = 'calc(100% + 4px)';
+                list.style.maxHeight = '220px';
+                list.style.overflowY = 'auto';
+                list.style.background = 'rgba(0,0,0,0.6)';
+                list.style.border = '1px solid rgba(255,255,255,0.25)';
+                list.style.borderRadius = '10px';
+                list.style.display = 'none';
+                list.style.zIndex = '10';
+                const options = Array.from(select.options).map(o => o.value).filter(Boolean);
+                function render(filter) {
+                    list.innerHTML = '';
+                    const q = (filter || '').toLowerCase();
+                    options.filter(v => !q || v.toLowerCase().includes(q)).slice(0, 200).forEach(v => {
+                        const item = document.createElement('div');
+                        item.textContent = v;
+                        item.style.padding = '0.5rem 0.75rem';
+                        item.style.cursor = 'pointer';
+                        item.addEventListener('click', () => { input.value = v; list.style.display = 'none'; });
+                        item.addEventListener('mouseover', () => item.style.background = 'rgba(255,255,255,0.08)');
+                        item.addEventListener('mouseout', () => item.style.background = 'transparent');
+                        list.appendChild(item);
+                    });
+                    list.style.display = 'block';
+                }
+                input.addEventListener('input', () => render(input.value));
+                input.addEventListener('focus', () => render(input.value));
+                document.addEventListener('click', (e) => { if (!wrapper.contains(e.target)) list.style.display = 'none'; });
+                select.parentNode.insertBefore(wrapper, select);
+                wrapper.appendChild(input);
+                wrapper.appendChild(list);
+                select.style.display = 'none';
+                select.setAttribute('data-enhanced', '1');
+            }
+        </script>
 {% include '_footer.html' %}
 </body>
 </html>

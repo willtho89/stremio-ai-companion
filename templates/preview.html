@@ -254,6 +254,7 @@
 </head>
 <body>
     <div class="container">
+        <img src="/static/logo2_256.png" alt="Stremio AI" style="width:72px;height:72px;border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,0.25);margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto;">
         <a href="#" onclick="goBackToConfigure()" class="back-link">← Back to Configure</a>
         <h1>Preview Your AI Companion</h1>
         
@@ -348,7 +349,12 @@
                 const adult = pathParts[4] || '0';
                 
                 // Determine which catalogs to search based on selected manifest type
-                const manifestType = document.getElementById('manifestType').value;
+                const activeGroup = document.querySelector('.manifest-group .manifest-url[style*="display: block"], .manifest-group .manifest-url[style*="display:block"]');
+                let manifestType = 'combined';
+                if (activeGroup) {
+                    const group = activeGroup.closest('.manifest-group');
+                    if (group && group.dataset && group.dataset.type) manifestType = group.dataset.type;
+                }
                 let movieResponse = null;
                 let seriesResponse = null;
                 

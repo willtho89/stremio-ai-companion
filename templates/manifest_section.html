@@ -1,28 +1,39 @@
 <!-- Shared manifest section partial -->
 <div class="manifest-section">
-    <h3>🔗 Your Stremio Manifest URL</h3>
-    <p>Choose the type of addon to install:</p>
-    
-    <div style="margin-bottom: 1rem;">
-        <select id="manifestType" onchange="updateManifestUrl()" style="width: 100%; padding: 0.75rem; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; background: rgba(255,255,255,0.1); color: white; font-size: 1rem; backdrop-filter: blur(10px);">
-            <option value="combined">Combined (Movies + Series)</option>
-            <option value="movie">Movies Only</option>
-            <option value="series">Series Only</option>
-        </select>
-    </div>
-    
-    <div class="manifest-url" id="manifestUrl">{{ manifest_urls.combined if manifest_urls else manifest_url }}</div>
-    
-    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-        <button class="copy-btn" onclick="installStremio()" style="background: rgba(76, 175, 80, 0.3); border-color: rgba(76, 175, 80, 0.5); flex: 1; min-width: 120px;">
-            📱 Stremio
-        </button>
-        <button class="copy-btn" onclick="installStremioWeb()" style="background: rgba(33, 150, 243, 0.3); border-color: rgba(33, 150, 243, 0.5); flex: 1; min-width: 120px;">
-            🌐 Stremio Web
-        </button>
-        <button class="copy-btn" onclick="copyToClipboard(getCurrentManifestUrl())" style="flex: 1; min-width: 120px;">
-            📋 Copy URL
-        </button>
+    <h3>🔗 Your Stremio Manifest</h3>
+    <p>Choose one of the addon manifests below:</p>
+
+    <div id="manifests">
+        <div class="manifest-group" data-type="combined" style="margin-bottom:1rem;">
+            <div style="font-weight:600; margin-bottom:0.5rem;">Combined (Movies + Series)</div>
+            <div class="manifest-url" style="display:none;">{{ manifest_urls.combined if manifest_urls else manifest_url }}</div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button class="copy-btn" onclick="installStremioType('combined')" style="background: rgba(76, 175, 80, 0.3); border-color: rgba(76, 175, 80, 0.5); flex:1; min-width:120px;">📱 Stremio</button>
+                <button class="copy-btn" onclick="installStremioWebType('combined')" style="background: rgba(33, 150, 243, 0.3); border-color: rgba(33, 150, 243, 0.5); flex:1; min-width:120px;">🌐 Stremio Web</button>
+                <button class="copy-btn" onclick="copyUrlType('combined')" style="flex:1; min-width:120px;">📋 Copy URL</button>
+                <button class="copy-btn" onclick="toggleManifestVisibilityType('combined')" style="flex:1; min-width:120px;">📄 Show Manifest</button>
+            </div>
+        </div>
+        <div class="manifest-group" data-type="movie" style="margin-bottom:1rem;">
+            <div style="font-weight:600; margin-bottom:0.5rem;">Movies Only</div>
+            <div class="manifest-url" style="display:none;">{{ manifest_urls.movie if manifest_urls else '' }}</div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button class="copy-btn" onclick="installStremioType('movie')" style="background: rgba(76, 175, 80, 0.3); border-color: rgba(76, 175, 80, 0.5); flex:1; min-width:120px;">📱 Stremio</button>
+                <button class="copy-btn" onclick="installStremioWebType('movie')" style="background: rgba(33, 150, 243, 0.3); border-color: rgba(33, 150, 243, 0.5); flex:1; min-width:120px;">🌐 Stremio Web</button>
+                <button class="copy-btn" onclick="copyUrlType('movie')" style="flex:1; min-width:120px;">📋 Copy URL</button>
+                <button class="copy-btn" onclick="toggleManifestVisibilityType('movie')" style="flex:1; min-width:120px;">📄 Show Manifest</button>
+            </div>
+        </div>
+        <div class="manifest-group" data-type="series" style="margin-bottom:0.5rem;">
+            <div style="font-weight:600; margin-bottom:0.5rem;">Series Only</div>
+            <div class="manifest-url" style="display:none;">{{ manifest_urls.series if manifest_urls else '' }}</div>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button class="copy-btn" onclick="installStremioType('series')" style="background: rgba(76, 175, 80, 0.3); border-color: rgba(76, 175, 80, 0.5); flex:1; min-width:120px;">📱 Stremio</button>
+                <button class="copy-btn" onclick="installStremioWebType('series')" style="background: rgba(33, 150, 243, 0.3); border-color: rgba(33, 150, 243, 0.5); flex:1; min-width:120px;">🌐 Stremio Web</button>
+                <button class="copy-btn" onclick="copyUrlType('series')" style="flex:1; min-width:120px;">📋 Copy URL</button>
+                <button class="copy-btn" onclick="toggleManifestVisibilityType('series')" style="flex:1; min-width:120px;">📄 Show Manifest</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -34,28 +45,37 @@
         movie: '{{ manifest_urls.movie if manifest_urls else "" }}',
         series: '{{ manifest_urls.series if manifest_urls else "" }}'
     };
-    
-    function getCurrentManifestUrl() {
-        const type = document.getElementById('manifestType').value;
+
+    function getManifestUrlByType(type) {
         return manifestUrls[type] || manifestUrls.combined;
     }
-    
-    function updateManifestUrl() {
-        const manifestUrlDiv = document.getElementById('manifestUrl');
-        manifestUrlDiv.textContent = getCurrentManifestUrl();
+
+    function toggleManifestVisibilityType(type) {
+        const group = document.querySelector(`.manifest-group[data-type="${type}"]`);
+        if (!group) return;
+        const urlDiv = group.querySelector('.manifest-url');
+        const btn = Array.from(group.querySelectorAll('.copy-btn')).find(b => b.textContent.includes('Show Manifest') || b.textContent.includes('Hide Manifest'));
+        const show = urlDiv.style.display === 'none' || urlDiv.style.display === '';
+        urlDiv.textContent = getManifestUrlByType(type);
+        urlDiv.style.display = show ? 'block' : 'none';
+        if (btn) btn.textContent = show ? '📄 Hide Manifest' : '📄 Show Manifest';
     }
-    
-    function installStremio() {
-        const manifestUrl = getCurrentManifestUrl();
-        // Remove protocol and use stremio:// format
+
+    function installStremioType(type) {
+        const manifestUrl = getManifestUrlByType(type);
         const cleanUrl = manifestUrl.replace(/^https?:\/\//, '');
         const stremioUrl = `stremio://${cleanUrl}`;
         window.open(stremioUrl, '_blank');
     }
 
-    function installStremioWeb() {
-        const manifestUrl = getCurrentManifestUrl();
+    function installStremioWebType(type) {
+        const manifestUrl = getManifestUrlByType(type);
         const webUrl = `https://web.stremio.com/#/addons?addon=${encodeURIComponent(manifestUrl)}`;
         window.open(webUrl, '_blank');
+    }
+
+    function copyUrlType(type) {
+        const manifestUrl = getManifestUrlByType(type);
+        copyToClipboard(manifestUrl);
     }
 </script>
