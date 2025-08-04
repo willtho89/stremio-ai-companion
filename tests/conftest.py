@@ -13,7 +13,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
 from app.models.config import Config
-from app.models.movie import StremioMeta, MovieSuggestions, TVSeriesSuggestions
+from app.models.movie import StremioMeta, MovieSuggestions, TVSeriesSuggestions, MovieSuggestion, TVSeriesSuggestion
 
 
 @pytest.fixture
@@ -57,11 +57,11 @@ def sample_movie_suggestions() -> MovieSuggestions:
     """
     return MovieSuggestions(
         movies=[
-            "The Shawshank Redemption (1994)",
-            "The Godfather (1972)",
-            "The Dark Knight (2008)",
-            "Pulp Fiction (1994)",
-            "Inception (2010)",
+            MovieSuggestion(title="The Shawshank Redemption", year=1994),
+            MovieSuggestion(title="The Godfather", year=1972),
+            MovieSuggestion(title="The Dark Knight", year=2008),
+            MovieSuggestion(title="Pulp Fiction", year=1994),
+            MovieSuggestion(title="Inception", year=2010),
         ]
     )
 
@@ -111,11 +111,11 @@ def sample_tv_suggestions() -> TVSeriesSuggestions:
     """
     return TVSeriesSuggestions(
         series=[
-            "Game of Thrones (2011)",
-            "Breaking Bad (2008)",
-            "The Sopranos (1999)",
-            "The Wire (2002)",
-            "Stranger Things (2016)",
+            TVSeriesSuggestion(title="Game of Thrones", year=2011),
+            TVSeriesSuggestion(title="Breaking Bad", year=2008),
+            TVSeriesSuggestion(title="The Sopranos", year=1999),
+            TVSeriesSuggestion(title="The Wire", year=2002),
+            TVSeriesSuggestion(title="Stranger Things", year=2016),
         ]
     )
 

@@ -218,6 +218,7 @@ MIT — See [LICENSE](LICENSE)
 ## 🙏 Acknowledgments
 
 - [Stremio](https://www.stremio.com/) — media discovery reimagined
+- [stremio-ai-search](https://github.com/itcon-pty-au/stremio-ai-search) - inspiration for this addon
 - [TMDB](https://themoviedb.org) — open movie & TV metadata platform
 - [OpenRouter](https://openrouter.ai) — model routing + GPT ecosystem
 - [RatingPosterDB](https://ratingposterdb.com/) — gorgeous cinematic posters

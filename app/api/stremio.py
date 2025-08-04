@@ -6,22 +6,22 @@ import asyncio
 import json
 import time
 from functools import lru_cache, wraps
-from app.services.cache import CACHE_INSTANCE
+from typing import Optional, List, Union
 
 from fastapi import APIRouter, HTTPException
-from typing import Optional, List
 
+from app.core.config import settings
 from app.core.logging import logger
 from app.models.config import Config
-from app.services.encryption import encryption_service
+from app.models.enums import ContentType
+from app.models.movie import MovieSuggestion, TVSeriesSuggestion
 from app.services import CATALOG_PROMPTS
+from app.services.cache import CACHE_INSTANCE
+from app.services.encryption import encryption_service
 from app.services.llm import LLMService
 from app.services.rpdb import RPDBService
 from app.services.tmdb import TMDBService
 from app.utils.conversion import movie_to_stremio_meta, tv_to_stremio_meta
-from app.utils.parsing import parse_movie_with_year
-from app.core.config import settings
-from app.models.enums import ContentType
 from app.utils.parsing import detect_user_intent
 
 router = APIRouter(tags=["Stremio API"])
@@ -57,14 +57,20 @@ def timed_lru_cache(seconds: int, maxsize: int = 128):
 
 
 async def _process_metadata_pipeline(
-    tmdb_service, rpdb_service, titles: list, include_adult: bool, *, search_fn, details_fn, meta_builder
+    tmdb_service,
+    rpdb_service,
+    suggestions: List[Union[MovieSuggestion, TVSeriesSuggestion]],
+    include_adult: bool,
+    *,
+    search_fn,
+    details_fn,
+    meta_builder,
 ):
     """Generic metadata pipeline that runs after LLM suggestions."""
     try:
         search_tasks = []
-        for title_in in titles:
-            title, year = parse_movie_with_year(title_in)
-            search_tasks.append(search_fn(title, year, include_adult))
+        for suggestion in suggestions:
+            search_tasks.append(search_fn(suggestion.title, suggestion.year, include_adult))
 
         search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
         logger.debug(f"Completed {len(search_results)} TMDB searches")
@@ -193,6 +199,11 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
         "resources": ["catalog"],
         "types": types,
         "catalogs": catalogs,
+        "behaviorHints": {
+            "configurable": True,
+            "configurationRequired": True,
+            "searchable": True,
+        },
     }
 
 
@@ -288,12 +299,14 @@ async def _process_catalog_request(
 
         # Generate suggestions based on content type
         if content_type == ContentType.MOVIE:
-            movie_titles = await llm_service.generate_movie_suggestions(search, max_results)
-            logger.debug(f"Generated {len(movie_titles)} movie suggestions: {movie_titles}")
+            movie_suggestions = await llm_service.generate_movie_suggestions(search, max_results)
+            logger.debug(
+                f"Generated {len(movie_suggestions)} movie suggestions: {[f'{s.title} ({s.year})' for s in movie_suggestions]}"
+            )
             movie_metas = await _process_metadata_pipeline(
                 tmdb_service,
                 rpdb_service,
-                movie_titles,
+                movie_suggestions,
                 include_adult,
                 search_fn=tmdb_service.search_movie,
                 details_fn=tmdb_service.get_movie_details,
@@ -302,12 +315,14 @@ async def _process_catalog_request(
             logger.debug(f"Returning {len(movie_metas)} movie metadata entries")
             return {"metas": movie_metas}
         else:  # content_type == ContentType.SERIES
-            series_titles = await llm_service.generate_tv_suggestions(search, max_results)
-            logger.debug(f"Generated {len(series_titles)} TV series suggestions: {series_titles}")
+            series_suggestions = await llm_service.generate_tv_suggestions(search, max_results)
+            logger.debug(
+                f"Generated {len(series_suggestions)} TV series suggestions: {[f'{s.title} ({s.year})' for s in series_suggestions]}"
+            )
             series_metas = await _process_metadata_pipeline(
                 tmdb_service,
                 rpdb_service,
-                series_titles,
+                series_suggestions,
                 include_adult,
                 search_fn=tmdb_service.search_tv,
                 details_fn=tmdb_service.get_tv_details,

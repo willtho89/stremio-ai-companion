@@ -7,6 +7,32 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+class MovieSuggestion(BaseModel):
+    """
+    Individual movie suggestion with structured fields.
+    """
+
+    title: str = Field(description="The movie title without year")
+    year: int = Field(description="The release year of the movie")
+    streaming_platform: Optional[str] = Field(
+        default=None, description="Primary streaming platform if known (e.g., Netflix, Prime Video, Hulu)"
+    )
+    note: Optional[str] = Field(default=None, description="Additional context like 'New this week' or 'Trending'")
+
+
+class TVSeriesSuggestion(BaseModel):
+    """
+    Individual TV series suggestion with structured fields.
+    """
+
+    title: str = Field(description="The TV series title without year")
+    year: int = Field(description="The first air year of the series")
+    streaming_platform: Optional[str] = Field(
+        default=None, description="Primary streaming platform if known (e.g., Netflix, Prime Video, Hulu)"
+    )
+    note: Optional[str] = Field(default=None, description="Additional context like 'New season' or 'Limited series'")
+
+
 class MovieSuggestions(BaseModel):
     """
     Pydantic model for structured movie suggestions output from LLM.
@@ -15,7 +41,7 @@ class MovieSuggestions(BaseModel):
     when generating movie suggestions.
     """
 
-    movies: List[str] = Field(description="List of movie titles that match the search query")
+    movies: List[MovieSuggestion] = Field(description="List of movie suggestions with title and year")
 
     @field_validator("movies")
     @classmethod
@@ -33,7 +59,7 @@ class TVSeriesSuggestions(BaseModel):
     when generating TV series suggestions.
     """
 
-    series: List[str] = Field(description="List of TV series titles that match the search query")
+    series: List[TVSeriesSuggestion] = Field(description="List of TV series suggestions with title and year")
 
     @field_validator("series")
     @classmethod

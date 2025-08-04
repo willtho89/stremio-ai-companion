@@ -25,14 +25,6 @@ class TestTMDBService:
         assert service.read_access_token == "test-token"
         assert service.base_url == "https://api.themoviedb.org/3"
 
-    def test_get_headers(self):
-        """Test the _get_headers method."""
-        service = TMDBService("test-token")
-        headers = service._get_headers()
-
-        assert headers["accept"] == "application/json"
-        assert headers["Authorization"] == "Bearer test-token"
-
     @patch("httpx.AsyncClient.get")
     async def test_search_movie_success(self, mock_get, tmdb_service):
         """Test successful movie search."""

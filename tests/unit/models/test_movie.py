@@ -5,7 +5,7 @@ Tests for the movie-related models.
 import pytest
 from pydantic import ValidationError
 
-from app.models.movie import MovieSuggestions, StremioMeta
+from app.models.movie import MovieSuggestions, StremioMeta, MovieSuggestion
 
 
 class TestMovieSuggestions:
@@ -14,13 +14,20 @@ class TestMovieSuggestions:
     def test_valid_movie_suggestions(self):
         """Test creating a valid MovieSuggestions object."""
         suggestions = MovieSuggestions(
-            movies=["The Shawshank Redemption (1994)", "The Godfather (1972)", "The Dark Knight (2008)"]
+            movies=[
+                MovieSuggestion(title="The Shawshank Redemption", year=1994),
+                MovieSuggestion(title="The Godfather", year=1972),
+                MovieSuggestion(title="The Dark Knight", year=2008),
+            ]
         )
 
         assert len(suggestions.movies) == 3
-        assert suggestions.movies[0] == "The Shawshank Redemption (1994)"
-        assert suggestions.movies[1] == "The Godfather (1972)"
-        assert suggestions.movies[2] == "The Dark Knight (2008)"
+        assert suggestions.movies[0].title == "The Shawshank Redemption"
+        assert suggestions.movies[0].year == 1994
+        assert suggestions.movies[1].title == "The Godfather"
+        assert suggestions.movies[1].year == 1972
+        assert suggestions.movies[2].title == "The Dark Knight"
+        assert suggestions.movies[2].year == 2008
 
     def test_empty_movies_list(self):
         """Test validation for empty movies list."""

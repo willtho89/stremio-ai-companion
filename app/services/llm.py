@@ -5,7 +5,7 @@ LLM service for the Stremio AI Companion application.
 import json
 import logging
 from datetime import datetime
-from typing import List, Type, Tuple, Iterable
+from typing import List, Type, Tuple, Iterable, Union, cast
 
 import openai
 from openai.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam
@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from app.models.config import Config
 from app.models.enums import ContentType
-from app.models.movie import MovieSuggestions, TVSeriesSuggestions
+from app.models.movie import MovieSuggestions, TVSeriesSuggestions, MovieSuggestion, TVSeriesSuggestion
 
 MESSAGE_TYPE = Iterable[ChatCompletionSystemMessageParam | ChatCompletionUserMessageParam,]
 
@@ -35,6 +35,27 @@ class LLMService:
     def _current_date(self) -> str:
         return datetime.now().strftime("%B %Y")
 
+    @property
+    def _current_year(self) -> int:
+        return datetime.now().year
+
+    @property
+    def _current_month(self) -> str:
+        return datetime.now().strftime("%B")
+
+    @property
+    def _current_week(self) -> str:
+        # Get week of month (1st, 2nd, etc.)
+        day = datetime.now().day
+        if day <= 7:
+            return "first week"
+        elif day <= 14:
+            return "second week"
+        elif day <= 21:
+            return "third week"
+        else:
+            return "last week"
+
     def _build_messages(self, query: str, max_results: int, content_type: ContentType) -> MESSAGE_TYPE:
         """
         Build the messages for the API call.
@@ -49,33 +70,128 @@ class LLMService:
         """
         base_instructions = {
             ContentType.MOVIE: {
-                "companion_type": "movie discovery AI companion",
+                "companion_type": "movie recommendation expert",
                 "content_name": "movie",
                 "content_plural": "movies",
                 "date_description": "release year",
-                "example_format": "Movie Title (YYYY)",
+                "type_label": "movie",
             },
             ContentType.SERIES: {
-                "companion_type": "TV series discovery AI companion",
+                "companion_type": "TV series recommendation expert",
                 "content_name": "TV series",
                 "content_plural": "TV series",
                 "date_description": "first air year",
-                "example_format": "Series Title (YYYY)",
+                "type_label": "series",
             },
         }
         instructions = base_instructions[content_type]
+        current_year = self._current_year
+        current_month = self._current_month
+        current_week = self._current_week
 
-        # This prompt is now simplified. It focuses on the *task* because
-        # the Structured Output feature handles the schema formatting.
-        system_prompt = f"""You are a {instructions['companion_type']}. Today is {self._current_date}.
-Your task is to generate {instructions['content_name']} titles that perfectly match the user's search query.
+        system_prompt = f"""You are a {instructions['companion_type']}. Today is {self._current_date} ({current_week} of {current_month}).
 
-Focus on understanding the user's mood, preferences, and context. If they mention themes, genres, time periods, or specific feelings, find {instructions['content_plural']} that truly capture those elements.
-If you can use web search, rely on classical media, letterboxd, TMDB, Trakt for recommendations.
+You will provide structured {instructions['content_name']} recommendations with the following fields:
+- title: The exact {instructions['content_name']} title (without year)
+- year: The {instructions['date_description']} as an integer
+- streaming_platform: The primary streaming platform if known (optional)
+- note: Additional context like "New this week", "Trending", etc. (optional)
 
-IMPORTANT: Each suggested title string MUST include its {instructions['date_description']} in parentheses, like "{instructions['example_format']}". This is critical for accurate identification."""
+CRITICAL INSTRUCTION FOR STREAMING/CURRENT CONTENT QUERIES:
+If the user asks about:
+- What's new on streaming services (Netflix, Prime Video, Hulu, Disney+, Max, Apple TV+, etc.)
+- What's trending this week/month
+- New releases on streaming platforms
+- What's coming to streaming services
+- Current streaming content
 
-        user_prompt = f"""Generate {max_results} {instructions['content_plural']} for the query: "{query}"."""
+YOU MUST:
+1. Use web search to find current information (your training data is outdated for this)
+2. Focus on {instructions['content_plural']} actually available NOW on major streaming services
+3. Include the streaming_platform field when known
+4. Add relevant notes like "New this week", "Trending #1", etc.
+5. Prioritize streaming availability over theatrical or physical releases
+
+QUERY ANALYSIS INSTRUCTIONS:
+1. Identify the type of query:
+   - STREAMING/CURRENT QUERIES (requires web search):
+     * "what's new on Netflix/streaming this week/month"
+     * "trending on streaming services"
+     * "new releases on [platform]"
+     * "what's coming to streaming in [month]"
+   - Specific {instructions['content_name']} (e.g., "The Matrix", "Breaking Bad")
+   - Franchise/series query (e.g., "Mission Impossible movies", "Star Wars films")
+   - Actor/Director filmography (e.g., "Tom Cruise movies", "Christopher Nolan films")
+   - Genre-based recommendations (e.g., "sci-fi movies", "crime dramas")
+   - Mood/theme-based recommendations (e.g., "feel-good movies", "dark psychological thrillers")
+   - Time-based queries (e.g., "movies from the 80s", "recent releases")
+   - General recommendations (e.g., "something good to watch")
+
+TIME-BASED QUERY HANDLING:
+- Current year is {current_year}
+- Current month is {current_month}
+- "this week" = current week ({current_week} of {current_month} {current_year})
+- "this month" = {current_month} {current_year}
+- "past year" or "last year" = {current_year - 1} to {current_year}
+- "recent" or "recently" = {current_year - 3} to {current_year}
+- "new" or "latest" = {current_year} (or current month for streaming queries)
+- "2020s" = 2020 to {current_year}
+- "last decade" = {current_year - 10} to {current_year}
+
+RECOMMENDATION STRATEGIES:
+
+For STREAMING/CURRENT CONTENT queries:
+- MUST use web search to get up-to-date information
+- Always populate the streaming_platform field
+- Add contextual notes (e.g., "Netflix Original", "New this week")
+- Mix new originals with newly added catalog titles
+- Consider trending or popular content on platforms
+
+For SPECIFIC {instructions['content_name'].upper()} queries:
+- Return only that exact {instructions['content_name']} and its direct sequels/prequels
+- Include year for each entry
+- Add notes for sequels (e.g., "Sequel", "Part 2")
+
+For FRANCHISE queries:
+- List all official entries with their respective years
+- Add notes for chronological order if different from release order
+- Include streaming_platform if consistently available
+
+For ACTOR/DIRECTOR queries:
+- Provide diverse selections with accurate years
+- Note special roles (e.g., "Directorial debut", "Oscar-winning performance")
+
+For GENRE/MOOD recommendations:
+- Match the specific mood or tone requested
+- Include a variety of years to show range
+- Note relevant accolades or special features
+
+CRITICAL REQUIREMENTS:
+- You MUST return exactly {max_results} {instructions['content_plural']}
+- Each entry MUST have a title (string) and year (integer)
+- The year must be accurate - this is critical for identification
+- For streaming queries, use web search to ensure current information
+- Include streaming_platform when known
+- Add helpful notes when they provide value
+- Never include the year in the title field - it must be separate
+
+ORDERING PRINCIPLES:
+- For streaming queries: newest additions or most popular first
+- For specific queries: chronological or series order
+- For quality-based queries: highest rated first
+- For time-based queries: most recent first or chronological
+- For genre/mood queries: best matches first
+
+Remember:
+- The structured format allows for better data handling
+- Always provide accurate years as integers
+- Use the optional fields (streaming_platform, note) to enhance recommendations
+- For current streaming content, web search is ESSENTIAL"""
+
+        user_prompt = f"""Generate exactly {max_results} {instructions['content_plural']} recommendations for this query: "{query}"
+
+Provide your response as structured data with separate title and year fields.
+If this is about current streaming content, use web search for accurate information and include the streaming platform."""
 
         return [
             ChatCompletionSystemMessageParam(role="system", content=system_prompt),
@@ -91,14 +207,13 @@ IMPORTANT: Each suggested title string MUST include its {instructions['date_desc
 
     async def _try_structured_completion(
         self, messages: MESSAGE_TYPE, response_model: Type[BaseModel], field_name: str, max_results: int
-    ) -> List[str]:
+    ) -> List[Union[MovieSuggestion, TVSeriesSuggestion]]:
         """
         Attempt to get structured completion from OpenAI using .parse().
-        This is OpenAI's recommended approach for reliable, schema-enforced output.
+        Returns a list of structured suggestion objects.
         """
         self.logger.debug(f"Attempting Structured Output with model '{self.model}'")
-        # The .parse() method directly uses the pydantic model to enforce the output structure.
-        # This is more reliable than JSON mode.
+
         response = await self.client.chat.completions.parse(
             model=self.model,
             messages=messages,
@@ -118,10 +233,10 @@ IMPORTANT: Each suggested title string MUST include its {instructions['date_desc
 
     async def _try_fallback_completion(
         self, messages: MESSAGE_TYPE, response_model: Type[BaseModel], field_name: str, max_results: int
-    ) -> List[str]:
+    ) -> List[Union[MovieSuggestion, TVSeriesSuggestion]]:
         """
-        Attempt fallback using JSON Mode. This is for models that may not
-        support the more advanced Structured Outputs feature.
+        Attempt fallback using JSON Mode.
+        Returns a list of structured suggestion objects.
         """
         self.logger.warning("Falling back to JSON Mode.")
 
@@ -129,7 +244,7 @@ IMPORTANT: Each suggested title string MUST include its {instructions['date_desc
         messages_with_fallback = messages + [
             {
                 "role": "system",
-                "content": f"You must respond with a valid JSON object that conforms to this schema: {json.dumps(response_model.model_json_schema())}",
+                "content": f"You must respond with a valid JSON object that conforms to this schema: {json.dumps(response_model.model_json_schema())}. Do not include the schema in your response!",
             }
         ]
 
@@ -153,10 +268,14 @@ IMPORTANT: Each suggested title string MUST include its {instructions['date_desc
         self.logger.debug(f"Successfully parsed {len(items)} items from fallback completion.")
         return items[:max_results]
 
-    async def _generate_suggestions(self, query: str, max_results: int, *, content_type: ContentType) -> List[str]:
+    async def _generate_suggestions(
+        self, query: str, max_results: int, *, content_type: ContentType
+    ) -> List[Union[MovieSuggestion, TVSeriesSuggestion]]:
         """
         Generate content suggestions, prioritizing Structured Outputs and then
         falling back to JSON mode if necessary.
+
+        Returns a list of Pydantic model objects (MovieSuggestion or TVSeriesSuggestion).
         """
         self.logger.debug(f"Generating {max_results} {content_type.value} suggestions for query: '{query}'")
 
@@ -164,25 +283,60 @@ IMPORTANT: Each suggested title string MUST include its {instructions['date_desc
         response_model, field_name = self._get_response_config(content_type)
 
         try:
-            # First, try the best-practice method. Your original instinct was correct.
-            return await self._try_structured_completion(messages, response_model, field_name, max_results)
+            suggestions = await self._try_structured_completion(messages, response_model, field_name, max_results)
+            return suggestions
         except (openai.BadRequestError, AttributeError) as e:
-            # This block gracefully handles cases where the model/endpoint does not support
-            # the .parse() method or structured outputs. For example, some older models
-            # or proxy servers might not support it. It's often indicated by a BadRequestError.
             self.logger.warning(f"Structured Output (.parse) failed: {e}. Attempting fallback.")
             try:
-                return await self._try_fallback_completion(messages, response_model, field_name, max_results)
+                suggestions = await self._try_fallback_completion(messages, response_model, field_name, max_results)
+                return suggestions
             except Exception as fallback_e:
                 self.logger.error(f"Fallback completion also failed: {fallback_e}")
-                return [query]  # Final fallback
+                # Return a fallback suggestion as a Pydantic model
+                if content_type == ContentType.MOVIE:
+                    return [MovieSuggestion(title=query, year=2024)]
+                else:
+                    return [TVSeriesSuggestion(title=query, year=2024)]
         except Exception as e:
             self.logger.error(f"An unexpected LLM service error occurred: {e}")
-            return [query]
+            # Return a fallback suggestion as a Pydantic model
+            if content_type == ContentType.MOVIE:
+                return [MovieSuggestion(title=query, year=2024)]
+            else:
+                return [TVSeriesSuggestion(title=query, year=2024)]
 
-    # ... The rest of your class is perfect and does not need changes.
-    async def generate_movie_suggestions(self, query: str, max_results: int) -> List[str]:
-        return await self._generate_suggestions(query, max_results, content_type=ContentType.MOVIE)
+    def _filter_duplicates(
+        self, suggestions: List[Union[MovieSuggestion, TVSeriesSuggestion]]
+    ) -> List[Union[MovieSuggestion, TVSeriesSuggestion]]:
+        """
+        Filter out duplicate suggestions based on title and year.
 
-    async def generate_tv_suggestions(self, query: str, max_results: int) -> List[str]:
-        return await self._generate_suggestions(query, max_results, content_type=ContentType.SERIES)
+        Args:
+            suggestions: List of movie or TV series suggestions
+
+        Returns:
+            List with duplicates removed, preserving order
+        """
+        seen = set()
+        filtered = []
+
+        for suggestion in suggestions:
+            # Create a unique key based on normalized title and year
+            key = (suggestion.title.lower().strip(), suggestion.year)
+            if key not in seen:
+                seen.add(key)
+                filtered.append(suggestion)
+
+        return filtered
+
+    async def generate_movie_suggestions(self, query: str, max_results: int) -> List[MovieSuggestion]:
+        """Generate movie suggestions and return as Pydantic models."""
+        suggestions = await self._generate_suggestions(query, max_results, content_type=ContentType.MOVIE)
+        filtered_suggestions = self._filter_duplicates(suggestions)
+        return cast(List[MovieSuggestion], filtered_suggestions)
+
+    async def generate_tv_suggestions(self, query: str, max_results: int) -> List[TVSeriesSuggestion]:
+        """Generate TV series suggestions and return as Pydantic models."""
+        suggestions = await self._generate_suggestions(query, max_results, content_type=ContentType.SERIES)
+        filtered_suggestions = self._filter_duplicates(suggestions)
+        return cast(List[TVSeriesSuggestion], filtered_suggestions)
