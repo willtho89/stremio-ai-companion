@@ -431,8 +431,13 @@
                 try {
                     const url = baseUrl.replace(/\/$/, '') + '/models';
                     const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${apiKey}` } });
-                    const data = await resp.json();
-                    if (!resp.ok) throw new Error((data && (data.error || data.message)) || 'Failed to fetch models');
+                    let data = null;
+                    try { data = await resp.json(); } catch (_) {}
+                    if (!resp.ok) {
+                        const code = data && (data.code || data.error?.code || data.status || data.statusCode || resp.status);
+                        const msg = (data && (data.error?.message || data.message || data.error)) || resp.statusText || 'Failed to fetch models';
+                        throw new Error(`${code || resp.status}: ${msg}`);
+                    }
                     const select = document.getElementById('model_name');
                     const prevValue = (() => {
                         if (select.getAttribute('data-enhanced') === '1') {
