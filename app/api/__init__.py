@@ -9,12 +9,32 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.staticfiles import StaticFiles
+from starlette.responses import Response
+from starlette.types import Scope, Receive, Send
 
 from app import __version__
 from app.api.stremio import router as stremio_router
 from app.api.web import router as web_router
 from app.core.logging import logger
 from app.services.cache import CACHE_INSTANCE
+
+
+class CachedStaticFiles(StaticFiles):
+    """StaticFiles with browser caching headers."""
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Add Cache-Control headers to static file responses."""
+
+        async def send_with_cache_headers(message):
+            if message["type"] == "http.response.start":
+                # Add Cache-Control header for browser caching
+                # Cache static assets for 30 days (2592000 seconds)
+                headers = list(message.get("headers", []))
+                headers.append((b"Cache-Control", b"public, max-age=2592000, immutable"))
+                message["headers"] = headers
+            await send(message)
+
+        await super().__call__(scope, receive, send_with_cache_headers)
 
 
 @asynccontextmanager
@@ -48,7 +68,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-app.mount("/static", StaticFiles(directory="./.assets"), name="static")
+app.mount("/static", CachedStaticFiles(directory="./.assets"), name="static")
 
 app.add_middleware(GZipMiddleware, compresslevel=9)
 

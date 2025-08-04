@@ -4,10 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [0.5.0]
 
+### Added
+- Cache for static content
+- simplify pagination for catalogs
+
+## [0.5.0]
+
 Easier initial setup with builtin support for Openrouter, Gemini, OpenAI and Anthropic models
 
 ### Added
 - Gzip compression for responses
+- Browser caching for static content (30-day cache with immutable flag)
 
 ### Changed
 - Refactor Configure page for easier support of multiple model providers

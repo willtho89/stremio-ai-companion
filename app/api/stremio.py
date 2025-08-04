@@ -390,25 +390,11 @@ async def _cached_catalog(
     else:
         logger.debug(f"Cache hit for key={key}, found {len(cached_entries['metas'])} existing entries")
 
-    # Adjust skip to treat 100 as index 0 (client quirk)
-    adjusted_skip = max(0, skip - 100)
-
     # Check if we have enough entries to satisfy the request
     total_entries = len(cached_entries["metas"])
 
-    # 0 < 34 and 34 > 30
-    if adjusted_skip < total_entries and total_entries > max(settings.MAX_CATALOG_ENTRIES / 4, 30):
-        # Return existing entries from cache
-        result_metas = cached_entries["metas"]
-        result_names = [meta.get("name", "Unknown") for meta in result_metas]
-        logger.debug(
-            f"Redis Cache: Returning {len(result_metas)} cached items for skip={skip} (adjusted to {adjusted_skip}): {result_names}"
-        )
-        return {"metas": result_metas}
-
-    # Need to generate more entries
+    # Already at max entries, return cached
     if total_entries >= settings.MAX_CATALOG_ENTRIES:
-        # Already at max entries, return empty
         logger.debug(f"Max catalog entries ({settings.MAX_CATALOG_ENTRIES}) reached for {catalog_id}")
         return {"metas": cached_entries["metas"]}
 
@@ -422,13 +408,13 @@ async def _cached_catalog(
     if existing_list:
         enhanced_prompt += f"\n\nAvoid recommending these already suggested titles: {', '.join(existing_list)}"
 
-    # Generate more entries
+    # Generate more entries - always request more than needed to account for duplicates
     new_result = await _process_catalog_request(
         config,
         enhanced_prompt,
         content_type,
         include_adult,
-        max_results=settings.MAX_CATALOG_RESULTS * 2,
+        max_results=settings.MAX_CATALOG_RESULTS,
     )
 
     # Filter out duplicates
@@ -441,20 +427,15 @@ async def _cached_catalog(
             existing_ids.add(meta_id)
             existing_titles.add(meta_name)
 
-            # Stop if we reach max entries
-            if len(cached_entries["metas"]) + len(new_metas) >= settings.MAX_CATALOG_ENTRIES:
-                break
-
     # Update cache with new entries (only possible with Redis)
     cached_entries["metas"].extend(new_metas)
     await cache.aset(key, cached_entries, catalog_ttl)
 
     logger.debug(f"Added {len(new_metas)} new entries, total now: {len(cached_entries['metas'])}")
 
-    # Hacky: Always return the newly generated items to save LLM compute time
-    result_names = [meta.get("name", "Unknown") for meta in new_metas]
-    logger.debug(f"Redis Cache: Returning {len(new_metas)} NEW items for skip={skip}: {result_names}")
-    return {"metas": new_metas}
+    # Return the whole results (cached + new)
+    logger.debug(f"Redis Cache: Returning {len(cached_entries['metas'])} total items for skip={skip}")
+    return {"metas": cached_entries["metas"]}
 
 
 @router.get("/config/{config}/adult/{adult}/catalog/{content_type}/{catalog_id}.json")

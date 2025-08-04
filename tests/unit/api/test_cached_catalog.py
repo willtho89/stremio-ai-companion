@@ -137,8 +137,14 @@ class TestCachedCatalog:
         # Should generate new entries since we don't have enough cached entries
         mock_process_catalog_request.assert_called_once()
 
-        # Should return new entries
-        assert result == {"metas": [{"name": "New Movie", "id": "new-id"}]}
+        # Should return combined entries (existing + new)
+        assert result == {
+            "metas": [
+                {"name": "Existing Movie 1", "id": "existing-1"},
+                {"name": "Existing Movie 2", "id": "existing-2"},
+                {"name": "New Movie", "id": "new-id"},
+            ]
+        }
 
     @pytest.mark.asyncio
     async def test_redis_cache_pagination(self, mock_cache, mock_process_catalog_request):
@@ -167,8 +173,10 @@ class TestCachedCatalog:
         # Don't check exact key format, but verify the value contains both existing and new entries
         assert len(mock_cache.aset.call_args[0][1]["metas"]) == 11  # 10 existing + 1 new
 
-        # Verify result contains only new entries
-        assert result == {"metas": [{"name": "Test Movie", "id": "test-id"}]}
+        # Verify result contains all entries (existing + new)
+        expected_metas = [{"name": f"Movie {i}", "id": f"id-{i}"} for i in range(1, 11)]
+        expected_metas.append({"name": "Test Movie", "id": "test-id"})
+        assert result == {"metas": expected_metas}
 
     @pytest.mark.asyncio
     async def test_redis_cache_max_entries(self, mock_cache, mock_process_catalog_request):
@@ -242,5 +250,7 @@ class TestCachedCatalog:
             mock_cache.aset.assert_called_once()
             assert mock_cache.aset.call_args[0][1] == expected_combined
 
-            # Verify result contains only new non-duplicate entries
-            assert result == {"metas": [{"name": "New Movie", "id": "new-id"}]}
+            # Verify result contains all entries (existing + new non-duplicate)
+            assert result == {
+                "metas": [{"name": "Existing Movie", "id": "existing-id"}, {"name": "New Movie", "id": "new-id"}]
+            }
