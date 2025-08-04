@@ -2,7 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.5.3]
+## [0.7.0]
+
+### Changed
+- Cache searches for 2h
+
+## [0.6.0]
 
 ### Changed
 - CI/CD complete refactor

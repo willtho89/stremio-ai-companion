@@ -258,7 +258,12 @@ async def get_series_manifest(config: str, adult: int):
 
 
 async def _process_catalog_request(
-    config: str, search: str, content_type: ContentType, include_adult: bool, max_results: int | None = None
+    config: str,
+    search: str,
+    content_type: ContentType,
+    include_adult: bool,
+    max_results: int | None = None,
+    cache_time_seconds: int | None = None,
 ):
     """
     Shared catalog processing logic for both movies and TV series.
@@ -283,21 +288,35 @@ async def _process_catalog_request(
 
         logger.debug(f"Processing {content_type} catalog request for '{search}' with {max_results} max results")
 
+        key = None
+        cache = CACHE_INSTANCE
+        if cache_time_seconds is not None:
+            try:
+                cleaned = "".join(search.lower().split()) if search else None
+                if cleaned:
+                    key = f"search:{content_type.value}:{'adult' if include_adult else 'safe'}:{cleaned}"
+            except Exception:
+                key = None
+
+            if key:
+                cached = await cache.aget(key)
+                if cached is not None:
+                    logger.debug(f"Cache hit for key={key}")
+                    return cached
+
         llm_service = LLMService(config_obj)
         tmdb_service = TMDBService(config_obj.tmdb_read_access_token)
         rpdb_service = RPDBService(config_obj.posterdb_api_key) if config_obj.use_posterdb else None
 
-        # Detect user intent from search query
         user_intent = detect_user_intent(search)
 
-        # If user intent conflicts with endpoint type, return empty list
         if user_intent and user_intent != content_type:
             logger.debug(
                 f"User intent '{user_intent}' conflicts with endpoint type '{content_type}', returning empty list"
             )
-            return {"metas": []}
+            result = {"metas": []}
+            return result
 
-        # Generate suggestions based on content type
         if content_type == ContentType.MOVIE:
             movie_suggestions = await llm_service.generate_movie_suggestions(search, max_results)
             logger.debug(
@@ -313,8 +332,8 @@ async def _process_catalog_request(
                 meta_builder=movie_to_stremio_meta,
             )
             logger.debug(f"Returning {len(movie_metas)} movie metadata entries")
-            return {"metas": movie_metas}
-        else:  # content_type == ContentType.SERIES
+            result = {"metas": movie_metas}
+        else:
             series_suggestions = await llm_service.generate_tv_suggestions(search, max_results)
             logger.debug(
                 f"Generated {len(series_suggestions)} TV series suggestions: {[f'{s.title} ({s.year})' for s in series_suggestions]}"
@@ -329,7 +348,11 @@ async def _process_catalog_request(
                 meta_builder=tv_to_stremio_meta,
             )
             logger.debug(f"Returning {len(series_metas)} series metadata entries")
-            return {"metas": series_metas}
+            result = {"metas": series_metas}
+
+        if cache_time_seconds and key:
+            await cache.aset(key, result, ttl=cache_time_seconds)
+        return result
 
     except Exception as e:
         logger.error(f"Catalog request failed: {e}")
@@ -376,6 +399,7 @@ async def _cached_catalog(
             content_type,
             include_adult,
             max_results=settings.MAX_CATALOG_RESULTS,
+            cache_time_seconds=None,
         )
         await cache.aset(key, result, catalog_ttl)
         result_names = [meta.get("name", "Unknown") for meta in result["metas"]]
@@ -485,7 +509,9 @@ async def get_catalog_search(config: str, adult: int, content_type: ContentType,
     This endpoint is called by Stremio to get movie metadata based on a search query.
     """
     # Always use the non-cached version for explicit searches
-    return await _process_catalog_request(config, search, content_type, bool(adult))
+    return await _process_catalog_request(
+        config, search, content_type, bool(adult), cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL
+    )
 
 
 @router.get(
@@ -500,7 +526,9 @@ async def get_catalog_search_split(
     This endpoint is called by Stremio to get movie metadata based on a search query.
     """
     # Always use the non-cached version for explicit searches
-    return await _process_catalog_request(config, search, content_type, bool(adult))
+    return await _process_catalog_request(
+        config, search, content_type, bool(adult), cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL
+    )
 
 
 #
