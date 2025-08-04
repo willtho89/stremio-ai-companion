@@ -167,17 +167,7 @@
         
         <form id="configForm">
             <div class="form-group">
-                <label for="openai_api_key">OpenAI API Key *</label>
-                <div style="position:relative;">
-                    <input type="password" id="openai_api_key" name="openai_api_key" required 
-                           placeholder="sk-..." value="{% if existing_config %}{{ existing_config.openai_api_key }}{% elif settings.OPENAI_API_KEY %}{{ settings.OPENAI_API_KEY }}{% endif %}" style="padding-right:2.5rem;">
-                    <button type="button" class="copy-btn" onclick="toggleVisibility('openai_api_key', this)" aria-label="Toggle visibility" style="position:absolute; right:0.5rem; top:5%; height:28px; display:flex; align-items:center; justify-content:center; padding:0 0.5rem; border-radius:6px; font-size:0.9rem; line-height:1;">👁️</button>
-                </div>
-                <div class="help-text">Your OpenAI API key for LLM movie suggestions</div>
-            </div>
-            
-            <div class="form-group">
-                <label for="openai_base_url">OpenAI Base URL</label>
+                <label for="openai_base_url">LLM Provider</label>
                 <select id="openai_base_url" name="openai_base_url">
                     {% set current_base = existing_config.openai_base_url if existing_config else settings.OPENAI_BASE_URL %}
                     {% set bases = {
@@ -193,6 +183,16 @@
                 </select>
                 <div class="help-text">Select a provider or choose Custom to enter URL</div>
                 <input type="url" id="openai_base_url_custom" placeholder="Custom base URL (required for Custom)" value="{% if current_base not in bases %}{{ current_base }}{% endif %}" style="margin-top:0.5rem; display:{% if current_base not in bases %}block{% else %}none{% endif %};">
+            </div>
+            
+            <div class="form-group">
+                <label for="openai_api_key" id="api_key_label">OpenAI API Key *</label>
+                <div style="position:relative;">
+                    <input type="password" id="openai_api_key" name="openai_api_key" required 
+                           placeholder="sk-..." value="{% if existing_config %}{{ existing_config.openai_api_key }}{% elif settings.OPENAI_API_KEY %}{{ settings.OPENAI_API_KEY }}{% endif %}" style="padding-right:2.5rem;">
+                    <button type="button" class="copy-btn" onclick="toggleVisibility('openai_api_key', this)" aria-label="Toggle visibility" style="position:absolute; right:0.5rem; top:5%; height:28px; display:flex; align-items:center; justify-content:center; padding:0 0.5rem; border-radius:6px; font-size:0.9rem; line-height:1;">👁️</button>
+                </div>
+                <div class="help-text" id="api_key_help">Your OpenAI API key for LLM movie suggestions</div>
             </div>
             
             <div class="form-group">
@@ -375,8 +375,21 @@
             document.getElementById('openai_base_url').addEventListener('change', function() {
                 const custom = document.getElementById('openai_base_url_custom');
                 const useOnline = document.getElementById('use_online_suffix');
+                const label = document.getElementById('api_key_label');
+                const help = document.getElementById('api_key_help');
+                const providerMap = {
+                    'https://openrouter.ai/api/v1': {name: 'OpenRouter', keyLabel: 'OpenRouter API Key *', help: 'Get your Key from https://openrouter.ai/keys'},
+                    'https://api.openai.com/v1': {name: 'OpenAI', keyLabel: 'OpenAI API Key *', help: 'Get your Key from https://platform.openai.com/api-keys'},
+                    'https://api.anthropic.com/v1': {name: 'Anthropic', keyLabel: 'Anthropic API Key *', help: 'Get your Key from https://console.anthropic.com/account/keys'},
+                    'https://generativelanguage.googleapis.com/v1beta/openai/': {name: 'Google Gemini', keyLabel: 'Google Gemini Key *', help: 'Get your Key from https://aistudio.google.com/app/apikey'}
+                };
+                const selected = providerMap[this.value];
+                if (label && selected) label.textContent = selected.keyLabel;
+                if (help && selected) help.innerHTML = 'Get your Key from <a href="' + selected.help.split(' ').pop() + '" target="_blank" style="color: rgba(255,255,255,0.8);">' + selected.help.split(' ').pop() + '</a>';
                 if (this.value === 'custom') {
                     custom.style.display = 'block';
+                    if (label) label.textContent = 'LLM API Key *';
+                    if (help) help.innerHTML = '';
                     if (useOnline) useOnline.parentElement.style.display = 'none';
                 } else {
                     custom.style.display = 'none';
@@ -397,7 +410,7 @@
 
             (function initModelSelect() {
                 const sel = document.getElementById('model_name');
-                const initial = "{% if existing_config %}{{ existing_config.model_name }}{% else %}{{ settings.DEFAULT_MODEL }}{% endif %}";
+                const initial = "{% if existing_config %}{{ existing_config.model_name }}{% else %}{% endif %}";
                 if (sel && initial) {
                     resetSearchableSelect(sel);
                     sel.innerHTML = '';
@@ -416,6 +429,10 @@
                     useOnline.parentElement.style.display = (baseSel.value === 'https://openrouter.ai/api/v1') ? 'flex' : 'none';
                     const initialModel = initial || '';
                     useOnline.checked = initialModel.endsWith(':online');
+                }
+                if (!initial && sel) {
+                    sel.disabled = false;
+                    enhanceSearchableSelect(sel);
                 }
             })();
 

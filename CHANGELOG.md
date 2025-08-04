@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.2]
+
+### Changed
+- Configure: Provider first, dynamic API key label per provider, custom uses "LLM API Key" and no help text
+- Configure: Remove default model unless provided by existing configuration
+
 ## [0.5.0]
 
 ### Added
