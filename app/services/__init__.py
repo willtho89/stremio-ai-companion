@@ -41,7 +41,7 @@ CATALOG_PROMPTS = {
     "critics_picks": {
         "title": "Critics' picks",
         "prompt": "Show me highly-rated titles from critics and award winners that are available on streaming services; optionally include notable on-demand or Blu-ray if streaming is unavailable",
-        "cache_ttl": 604.800,  # 7 days
+        "cache_ttl": 604800,  # 7 days
     },
     "hidden_gems": {
         "title": "Hidden gems",

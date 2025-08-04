@@ -11,7 +11,7 @@ def test_footer_visible_by_default(monkeypatch):
     html = response.text
     assert re.search(r">v?\d+\.\d+\.\d+<", html)
     assert "GitHub" in html
-    assert "Buy me a coffee" in html
+    assert "☕ Buy me a coffee" in html
 
 
 def test_footer_can_be_disabled(monkeypatch):
@@ -19,4 +19,4 @@ def test_footer_can_be_disabled(monkeypatch):
     response = client.get("/")
     assert response.status_code == 200
     html = response.text
-    assert "Buy me a coffee" not in html
+    assert "☕ Buy me a coffee" not in html

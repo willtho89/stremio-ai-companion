@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.5]
+
+### Added
+- slugify for search cache key
+
+## [0.7.5]
+
+### Added
+- Configuration validation on save: tests LLM, TMDB, and RPDB connections
+- Meaningful error messages for configuration validation failures
+
+### Fixed
+- Configuration save now validates all services before creating manifest URLs
+
+## [0.7.4]
+
+### Fixed
+- removed behavior which led to an infinite loop
+
+## [0.7.3]
+
+### Added
+- validation for TMDB key
+
+### Fixed
+- fix empty cache served for searches
+
+## [0.7.2]
+
+### Fixed
+- fix CACHE catalog:critics_picks
+
+## [0.7.1]
+
+### Fixed
+- get correct CATALOG_PROMPTS
+
+## [0.7.0]
+
+### Changed
+- Cache searches for 2h
+
+## [0.6.0]
+
+### Changed
+- CI/CD complete refactor
+- Better Prompting
+
 ## [0.5.3]
 
 ### Changed

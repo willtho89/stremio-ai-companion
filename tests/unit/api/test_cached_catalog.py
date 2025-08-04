@@ -59,19 +59,6 @@ class TestCachedCatalog:
         assert mock_cache.aset.call_args[0][1] == result
 
     @pytest.mark.asyncio
-    async def test_lru_cache_skip_nonzero(self, mock_cache, mock_process_catalog_request):
-        """Test LRU cache behavior with skip > 0."""
-        result = await _cached_catalog("test_config", ContentType.MOVIE, "trending_movie", skip=100)
-
-        # Verify no cache operations or processing for skip > 0 with LRU cache
-        mock_cache.aget.assert_not_called()
-        mock_process_catalog_request.assert_not_called()
-        mock_cache.aset.assert_not_called()
-
-        # Verify empty result
-        assert result == {"metas": []}
-
-    @pytest.mark.asyncio
     async def test_lru_cache_hit(self, mock_cache, mock_process_catalog_request):
         """Test LRU cache hit."""
         # Set up cache hit

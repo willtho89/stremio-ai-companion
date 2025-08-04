@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.models.config import Config
 from app.services.encryption import encryption_service
+from app.services.validation import ConfigValidationService
 
 
 def get_request_scheme(request: Request) -> str:
@@ -158,6 +159,14 @@ async def save_config(
             use_posterdb=use_posterdb_bool,
             posterdb_api_key=posterdb_api_key if posterdb_api_key else None,
         )
+
+        # Validate configuration by testing connections
+        validation_service = ConfigValidationService()
+        validation_errors = await validation_service.validate_config(config)
+
+        if validation_errors:
+            error_message = validation_service.format_validation_errors(validation_errors)
+            return JSONResponse({"success": False, "detail": error_message}, status_code=400)
 
         encrypted_config = encryption_service.encrypt(config.model_dump_json())
         scheme = get_request_scheme(request)

@@ -75,7 +75,7 @@ class LLMService:
                 "content_plural": "movies",
                 "date_description": "release year",
                 "type_label": "movie",
-                "avoid_label": "tv shows"
+                "avoid_label": "tv shows",
             },
             ContentType.SERIES: {
                 "companion_type": "TV series recommendation expert",
@@ -83,7 +83,7 @@ class LLMService:
                 "content_plural": "TV series",
                 "date_description": "first air year",
                 "type_label": "series",
-                "avoid_label": "movies"
+                "avoid_label": "movies",
             },
         }
         instructions = base_instructions[content_type]
@@ -106,7 +106,7 @@ If the user asks about:
 - New releases on streaming platforms
 - What's coming to streaming services
 - Current streaming content
-- Return only {instructions['content_plural']} recommendations. 
+- Return only {instructions['content_plural']} recommendations.
 - Do NOT return {instructions['avoid_label']}!
 
 YOU MUST:
@@ -332,5 +332,7 @@ If this is about current streaming content, use web search for accurate informat
         self.logger.info(f"Generating {max_results} TV series suggestions for query: '{query}'")
         suggestions = await self._generate_suggestions(query, max_results, content_type=ContentType.SERIES)
         filtered_suggestions = self._filter_duplicates(suggestions)
-        self.logger.info(f"Generated {len(filtered_suggestions)} TV series suggestions. [{datetime.now() - start_time}]")
+        self.logger.info(
+            f"Generated {len(filtered_suggestions)} TV series suggestions. [{datetime.now() - start_time}]"
+        )
         return cast(List[TVSeriesSuggestion], filtered_suggestions)

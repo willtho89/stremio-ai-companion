@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str | None = Field(default=None, description="Redis host if URL not provided")
     REDIS_PORT: int = Field(default=6379, description="Redis port")
     REDIS_DB: int = Field(default=0, description="Redis DB index")
+    CACHE_SEARCH_QUERY_TTL: int = Field(default=14400, description="TTL for cached search queries")  # default 4h
 
     # Customizing
     FOOTER_ENABLED: bool = Field(default=True, description="Show footer on pages")
