@@ -207,6 +207,7 @@
                 <select id="model_name" name="model_name" disabled style="width:100%;">
                     <option value="" disabled selected>Fetch models to select…</option>
                 </select>
+                <div id="model_spinner" class="help-text" style="display:none;">Loading models…</div>
                 <div class="help-text">Searchable dropdown enabled after fetching models. You can still type a custom value.</div>
             </div>
             
@@ -436,6 +437,75 @@
                 }
             })();
 
+            async function fetchModels() {
+                const spinner = document.getElementById('model_spinner');
+                const btn = document.getElementById('fetch_models_btn');
+                const apiKey = document.getElementById('openai_api_key').value.trim();
+                const baseSelect = document.getElementById('openai_base_url');
+                const customBase = document.getElementById('openai_base_url_custom').value.trim();
+                const baseUrl = baseSelect.value === 'custom' ? customBase : baseSelect.value;
+                if (!apiKey) return;
+                if (btn) { btn.disabled = true; btn.textContent = 'Fetching...'; }
+                if (spinner) spinner.style.display = 'block';
+                try {
+                    const url = baseUrl.replace(/\/$/, '') + '/models';
+                    const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+                    let data = null;
+                    try { data = await resp.json(); } catch (_) {}
+                    if (!resp.ok) {
+                        const code = data && (data.code || data.error?.code || data.status || data.statusCode || resp.status);
+                        const msg = (data && (data.error?.message || data.message || data.error)) || resp.statusText || 'Failed to fetch models';
+                        throw new Error(`${code || resp.status}: ${msg}`);
+                    }
+                    const select = document.getElementById('model_name');
+                    const prevValue = (() => {
+                        if (select.getAttribute('data-enhanced') === '1') {
+                            const inp = select.previousSibling && select.previousSibling.querySelector('input');
+                            return inp ? inp.value : '';
+                        }
+                        return select.value || '';
+                    })();
+                    resetSearchableSelect(select);
+                    select.innerHTML = '';
+                    let models = [];
+                    if (Array.isArray(data)) models = data;
+                    else if (Array.isArray(data.data)) models = data.data;
+                    else if (Array.isArray(data.models)) models = data.models;
+                    const unique = Array.from(new Set(models.map(m => typeof m === 'string' ? m : (m.id || m.name)).filter(Boolean)));
+                    if (!unique.length) throw new Error('No models found');
+                    const normalizedPrev = (prevValue || '').trim();
+                    unique.forEach((id) => {
+                        const opt = document.createElement('option');
+                        opt.value = id;
+                        opt.textContent = id;
+                        if (normalizedPrev && id === normalizedPrev) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                    if (normalizedPrev && !unique.includes(normalizedPrev)) {
+                        const customOpt = document.createElement('option');
+                        customOpt.value = normalizedPrev;
+                        customOpt.textContent = normalizedPrev + ' (custom)';
+                        customOpt.selected = true;
+                        select.insertBefore(customOpt, select.firstChild);
+                    } else if (!normalizedPrev) {
+                        const placeholder = document.createElement('option');
+                        placeholder.value = '';
+                        placeholder.textContent = 'Select a model…';
+                        placeholder.disabled = true;
+                        placeholder.selected = true;
+                        select.insertBefore(placeholder, select.firstChild);
+                    }
+                    select.disabled = false;
+                    enhanceSearchableSelect(select);
+                    const inp = select.previousSibling && select.previousSibling.querySelector('input');
+                    if (inp) inp.value = normalizedPrev;
+                    select.setAttribute('data-fetched', '1');
+                } finally {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Fetch models'; }
+                    if (spinner) spinner.style.display = 'none';
+                }
+            }
+
             document.getElementById('fetch_models_btn').addEventListener('click', async function() {
                 const apiKey = document.getElementById('openai_api_key').value.trim();
                 const baseSelect = document.getElementById('openai_base_url');
@@ -471,24 +541,33 @@
                     else if (Array.isArray(data.models)) models = data.models;
                     const unique = Array.from(new Set(models.map(m => typeof m === 'string' ? m : (m.id || m.name)).filter(Boolean)));
                     if (!unique.length) throw new Error('No models found');
-                    unique.forEach(id => {
+                    let selectedIndex = -1;
+                    const normalizedPrev = (prevValue || '').trim();
+                    unique.forEach((id, idx) => {
                         const opt = document.createElement('option');
                         opt.value = id;
                         opt.textContent = id;
-                        if (id === prevValue) opt.selected = true;
+                        if (normalizedPrev && id === normalizedPrev) { opt.selected = true; selectedIndex = idx; }
                         select.appendChild(opt);
                     });
-                    if (prevValue && !unique.includes(prevValue)) {
+                    if (normalizedPrev && !unique.includes(normalizedPrev)) {
                         const customOpt = document.createElement('option');
-                        customOpt.value = prevValue;
-                        customOpt.textContent = prevValue + ' (custom)';
+                        customOpt.value = normalizedPrev;
+                        customOpt.textContent = normalizedPrev + ' (custom)';
                         customOpt.selected = true;
                         select.insertBefore(customOpt, select.firstChild);
+                    } else if (!normalizedPrev) {
+                        const placeholder = document.createElement('option');
+                        placeholder.value = '';
+                        placeholder.textContent = 'Select a model…';
+                        placeholder.disabled = true;
+                        placeholder.selected = true;
+                        select.insertBefore(placeholder, select.firstChild);
                     }
                     select.disabled = false;
                     enhanceSearchableSelect(select);
                     const inp = select.previousSibling && select.previousSibling.querySelector('input');
-                    if (inp) inp.value = prevValue || select.value;
+                    if (inp) inp.value = normalizedPrev;
                 } catch (e) {
                     alert(e.message);
                 } finally {
@@ -581,6 +660,11 @@
                 wrapper.appendChild(list);
                 select.style.display = 'none';
                 select.setAttribute('data-enhanced', '1');
+                input.addEventListener('focus', async () => {
+                    const alreadyFetched = select.getAttribute('data-fetched') === '1';
+                    const hasOptions = Array.from(select.options).filter(o => o.value).length > 0;
+                    if (!alreadyFetched && !hasOptions) await fetchModels();
+                });
             }
         </script>
 {% include '_footer.html' %}
