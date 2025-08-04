@@ -366,7 +366,8 @@ async def _cached_catalog(
     Cached version of the catalogue view with pagination support (Redis only).
     """
     cache = CACHE_INSTANCE
-    catalog_config = CATALOG_PROMPTS.get(catalog_id, CATALOG_PROMPTS["trending"])
+    catalog_id = catalog_id.rstrip(f"_{content_type.value}")  # cleanup catalog_id
+    catalog_config = CATALOG_PROMPTS.get(catalog_id)
     prompt = catalog_config["prompt"]
 
     # Get TTL for this specific catalog
