@@ -1,0 +1,71 @@
+# Configuration for PR labeler
+# https://github.com/actions/labeler
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+      - 'docs/**'
+
+docker:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - 'entrypoint.sh'
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'requirements*.txt'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - 'Pipfile*'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tests/**'
+      - 'pytest.ini'
+      - '.coveragerc'
+      - 'conftest.py'
+
+api:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'app/api/**'
+
+models:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'app/models/**'
+
+services:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'app/services/**'
+
+frontend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'templates/**'
+      - 'static/**'
+      - '**/*.html'
+      - '**/*.css'
+      - '**/*.js'
+
+ci/cd:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+
+config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '**/*.toml'
+      - '**/*.ini'
+      - '.env*'

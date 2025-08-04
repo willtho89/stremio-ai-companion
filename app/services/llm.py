@@ -33,7 +33,7 @@ class LLMService:
 
     @property
     def _current_date(self) -> str:
-        return datetime.now().strftime("%B %Y")
+        return datetime.now().strftime("%d. %B %Y")
 
     @property
     def _current_year(self) -> int:
@@ -75,6 +75,7 @@ class LLMService:
                 "content_plural": "movies",
                 "date_description": "release year",
                 "type_label": "movie",
+                "avoid_label": "tv shows",
             },
             ContentType.SERIES: {
                 "companion_type": "TV series recommendation expert",
@@ -82,6 +83,7 @@ class LLMService:
                 "content_plural": "TV series",
                 "date_description": "first air year",
                 "type_label": "series",
+                "avoid_label": "movies",
             },
         }
         instructions = base_instructions[content_type]
@@ -104,13 +106,12 @@ If the user asks about:
 - New releases on streaming platforms
 - What's coming to streaming services
 - Current streaming content
+- Return only {instructions['content_plural']} recommendations.
+- Do NOT return {instructions['avoid_label']}!
 
 YOU MUST:
-1. Use web search to find current information (your training data is outdated for this)
+1. If possible use web search to find current information (your training data is outdated for this)
 2. Focus on {instructions['content_plural']} actually available NOW on major streaming services
-3. Include the streaming_platform field when known
-4. Add relevant notes like "New this week", "Trending #1", etc.
-5. Prioritize streaming availability over theatrical or physical releases
 
 QUERY ANALYSIS INSTRUCTIONS:
 1. Identify the type of query:
@@ -141,38 +142,30 @@ TIME-BASED QUERY HANDLING:
 RECOMMENDATION STRATEGIES:
 
 For STREAMING/CURRENT CONTENT queries:
-- MUST use web search to get up-to-date information
-- Always populate the streaming_platform field
-- Add contextual notes (e.g., "Netflix Original", "New this week")
+- Preferably use web search to get up-to-date information
 - Mix new originals with newly added catalog titles
 - Consider trending or popular content on platforms
 
 For SPECIFIC {instructions['content_name'].upper()} queries:
 - Return only that exact {instructions['content_name']} and its direct sequels/prequels
 - Include year for each entry
-- Add notes for sequels (e.g., "Sequel", "Part 2")
 
 For FRANCHISE queries:
 - List all official entries with their respective years
-- Add notes for chronological order if different from release order
-- Include streaming_platform if consistently available
 
 For ACTOR/DIRECTOR queries:
 - Provide diverse selections with accurate years
-- Note special roles (e.g., "Directorial debut", "Oscar-winning performance")
 
 For GENRE/MOOD recommendations:
 - Match the specific mood or tone requested
 - Include a variety of years to show range
-- Note relevant accolades or special features
 
 CRITICAL REQUIREMENTS:
-- You MUST return exactly {max_results} {instructions['content_plural']}
+- You must return not more than {max_results} {instructions['content_plural']}
+- Return only {instructions['content_plural']} recommendations, do not return {instructions['avoid_label']}
 - Each entry MUST have a title (string) and year (integer)
 - The year must be accurate - this is critical for identification
 - For streaming queries, use web search to ensure current information
-- Include streaming_platform when known
-- Add helpful notes when they provide value
 - Never include the year in the title field - it must be separate
 
 ORDERING PRINCIPLES:
@@ -180,13 +173,8 @@ ORDERING PRINCIPLES:
 - For specific queries: chronological or series order
 - For quality-based queries: highest rated first
 - For time-based queries: most recent first or chronological
-- For genre/mood queries: best matches first
-
-Remember:
-- The structured format allows for better data handling
-- Always provide accurate years as integers
-- Use the optional fields (streaming_platform, note) to enhance recommendations
-- For current streaming content, web search is ESSENTIAL"""
+- For all others: best matches first
+"""
 
         user_prompt = f"""Generate exactly {max_results} {instructions['content_plural']} recommendations for this query: "{query}"
 
@@ -331,12 +319,20 @@ If this is about current streaming content, use web search for accurate informat
 
     async def generate_movie_suggestions(self, query: str, max_results: int) -> List[MovieSuggestion]:
         """Generate movie suggestions and return as Pydantic models."""
+        start_time = datetime.now()
+        self.logger.info(f"Generating {max_results} movie suggestions for query: '{query}'")
         suggestions = await self._generate_suggestions(query, max_results, content_type=ContentType.MOVIE)
         filtered_suggestions = self._filter_duplicates(suggestions)
+        self.logger.info(f"Generated {len(filtered_suggestions)} movie suggestions. [{datetime.now() - start_time}]")
         return cast(List[MovieSuggestion], filtered_suggestions)
 
     async def generate_tv_suggestions(self, query: str, max_results: int) -> List[TVSeriesSuggestion]:
         """Generate TV series suggestions and return as Pydantic models."""
+        start_time = datetime.now()
+        self.logger.info(f"Generating {max_results} TV series suggestions for query: '{query}'")
         suggestions = await self._generate_suggestions(query, max_results, content_type=ContentType.SERIES)
         filtered_suggestions = self._filter_duplicates(suggestions)
+        self.logger.info(
+            f"Generated {len(filtered_suggestions)} TV series suggestions. [{datetime.now() - start_time}]"
+        )
         return cast(List[TVSeriesSuggestion], filtered_suggestions)
