@@ -3,9 +3,73 @@ TMDB service for the Stremio AI Companion application.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 
 import httpx
+from pydantic import BaseModel, ConfigDict
+
+
+class TMDBSearchParams(BaseModel):
+    """Parameters for TMDB search requests."""
+
+    model_config = ConfigDict(frozen=True)
+
+    query: str
+    include_adult: bool = False
+    language: str = "en-US"
+    page: int = 1
+    year: Optional[int] = None
+
+
+class TMDBMovieSearchParams(TMDBSearchParams):
+    """Parameters specific to movie search requests."""
+
+    @property
+    def api_params(self) -> dict[str, str]:
+        """Convert to API parameters dictionary."""
+        params = {
+            "query": self.query,
+            "include_adult": "true" if self.include_adult else "false",
+            "language": self.language,
+            "page": str(self.page),
+        }
+        if self.year:
+            params["primary_release_year"] = str(self.year)
+        return params
+
+
+class TMDBTVSearchParams(TMDBSearchParams):
+    """Parameters specific to TV search requests."""
+
+    @property
+    def api_params(self) -> dict[str, str]:
+        """Convert to API parameters dictionary."""
+        params = {
+            "query": self.query,
+            "include_adult": "true" if self.include_adult else "false",
+            "language": self.language,
+            "page": str(self.page),
+        }
+        if self.year:
+            params["first_air_date_year"] = str(self.year)
+        return params
+
+
+class TMDBDetailsParams(BaseModel):
+    """Parameters for TMDB details requests."""
+
+    model_config = ConfigDict(frozen=True)
+
+    language: str = "en-US"
+    append_to_response: str = "external_ids"
+
+    @property
+    def api_params(self) -> dict[str, str]:
+        """Convert to API parameters dictionary."""
+        return {
+            "language": self.language,
+            "append_to_response": self.append_to_response,
+        }
 
 
 class TMDBService:
@@ -16,18 +80,21 @@ class TMDBService:
     from the TMDB API.
     """
 
-    def __init__(self, read_access_token: str):
+    def __init__(self, read_access_token: str, timeout: float = 10.0) -> None:
         """
         Initialize the TMDB service with an access token.
 
         Args:
             read_access_token: TMDB API read access token
+            timeout: HTTP request timeout in seconds
         """
         self.read_access_token = read_access_token
         self.base_url = "https://api.themoviedb.org/3"
+        self.timeout = timeout
         self.logger = logging.getLogger("stremio_ai_companion.TMDBService")
 
-    def _get_headers(self) -> Dict[str, str]:
+    @property
+    def _headers(self) -> dict[str, str]:
         """
         Get the headers required for TMDB API requests.
 
@@ -36,9 +103,41 @@ class TMDBService:
         """
         return {"accept": "application/json", "Authorization": f"Bearer {self.read_access_token}"}
 
+    async def _make_request(self, endpoint: str, params: dict[str, str]) -> Optional[dict[str, Any]]:
+        """
+        Make an HTTP request to the TMDB API.
+
+        Args:
+            endpoint: API endpoint to call
+            params: Query parameters
+
+        Returns:
+            Response data or None if request failed
+        """
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            try:
+                response = await client.get(f"{self.base_url}/{endpoint}", params=params, headers=self._headers)
+                response.raise_for_status()
+
+                if response.status_code == 401:
+                    self.logger.error("TMDB API authentication failed - check read access token")
+                    return None
+
+                return response.json()
+
+            except httpx.TimeoutException:
+                self.logger.warning(f"TMDB request timeout for endpoint: {endpoint}")
+                return None
+            except httpx.HTTPStatusError as e:
+                self.logger.error(f"TMDB HTTP error {e.response.status_code} for endpoint: {endpoint}")
+                return None
+            except Exception as e:
+                self.logger.error(f"TMDB request error for {endpoint}: {e}")
+                return None
+
     async def search_movie(
         self, title: str, year: Optional[int] = None, include_adult: bool = False
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         """
         Search for a movie by title and optional year.
 
@@ -51,49 +150,25 @@ class TMDBService:
             Dictionary with movie data or None if not found
         """
         self.logger.debug(f"Searching TMDB for movie: '{title}'" + (f" ({year})" if year else ""))
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            try:
-                params = {
-                    "query": title,
-                    "include_adult": "true" if include_adult else "false",
-                    "language": "en-US",
-                    "page": "1",
-                }
 
-                # Add year filter if provided
-                if year:
-                    params["primary_release_year"] = str(year)
+        search_params = TMDBMovieSearchParams(query=title, year=year, include_adult=include_adult)
 
-                response = await client.get(f"{self.base_url}/search/movie", params=params, headers=self._get_headers())
-                response.raise_for_status()
-                data = response.json()
+        data = await self._make_request("search/movie", search_params.api_params)
 
-                if response.status_code == 401:
-                    self.logger.error("TMDB API authentication failed - check read access token")
-                    return None
+        if not data or not data.get("results"):
+            self.logger.warning(f"No TMDB results found for movie '{title}'" + (f" ({year})" if year else ""))
+            return None
 
-                if data.get("results"):
-                    result = data["results"][0]
-                    self.logger.debug(
-                        f"Found TMDB result for '{title}': {result.get('title', 'Unknown')} ({result.get('release_date', 'Unknown')[:4] if result.get('release_date') else 'Unknown'})"
-                    )
-                    return result
-                else:
-                    self.logger.warning(f"No TMDB results found for '{title}'" + (f" ({year})" if year else ""))
-                return None
-            except httpx.TimeoutException:
-                self.logger.warning(f"TMDB search timeout for: {title}")
-                return None
-            except httpx.HTTPStatusError as e:
-                self.logger.error(f"TMDB HTTP error {e.response.status_code} for: {title}")
-                return None
-            except Exception as e:
-                self.logger.error(f"TMDB search error for {title}: {e}")
-                return None
+        result = data["results"][0]
+        self.logger.debug(
+            f"Found TMDB result for '{title}': {result.get('title', 'Unknown')} "
+            f"({result.get('release_date', 'Unknown')[:4] if result.get('release_date') else 'Unknown'})"
+        )
+        return result
 
     async def search_tv(
         self, title: str, year: Optional[int] = None, include_adult: bool = False
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         """
         Search for a TV series by title and optional year.
 
@@ -106,47 +181,23 @@ class TMDBService:
             Dictionary with TV series data or None if not found
         """
         self.logger.debug(f"Searching TMDB for TV series: '{title}'" + (f" ({year})" if year else ""))
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            try:
-                params = {
-                    "query": title,
-                    "include_adult": "true" if include_adult else "false",
-                    "language": "en-US",
-                    "page": "1",
-                }
 
-                # Add year filter if provided
-                if year:
-                    params["first_air_date_year"] = str(year)
+        search_params = TMDBTVSearchParams(query=title, year=year, include_adult=include_adult)
 
-                response = await client.get(f"{self.base_url}/search/tv", params=params, headers=self._get_headers())
-                response.raise_for_status()
-                data = response.json()
+        data = await self._make_request("search/tv", search_params.api_params)
 
-                if response.status_code == 401:
-                    self.logger.error("TMDB API authentication failed - check read access token")
-                    return None
+        if not data or not data.get("results"):
+            self.logger.warning(f"No TMDB results found for series '{title}'" + (f" ({year})" if year else ""))
+            return None
 
-                if data.get("results"):
-                    result = data["results"][0]
-                    self.logger.debug(
-                        f"Found TMDB result for '{title}': {result.get('name', 'Unknown')} ({result.get('first_air_date', 'Unknown')[:4] if result.get('first_air_date') else 'Unknown'})"
-                    )
-                    return result
-                else:
-                    self.logger.warning(f"No TMDB results found for '{title}'" + (f" ({year})" if year else ""))
-                return None
-            except httpx.TimeoutException:
-                self.logger.warning(f"TMDB search timeout for: {title}")
-                return None
-            except httpx.HTTPStatusError as e:
-                self.logger.error(f"TMDB HTTP error {e.response.status_code} for: {title}")
-                return None
-            except Exception as e:
-                self.logger.error(f"TMDB search error for {title}: {e}")
-                return None
+        result = data["results"][0]
+        self.logger.debug(
+            f"Found TMDB result for '{title}': {result.get('name', 'Unknown')} "
+            f"({result.get('first_air_date', 'Unknown')[:4] if result.get('first_air_date') else 'Unknown'})"
+        )
+        return result
 
-    async def get_movie_details(self, movie_id: int) -> Optional[Dict[str, Any]]:
+    async def get_movie_details(self, movie_id: int) -> Optional[dict[str, Any]]:
         """
         Get detailed information about a movie by ID.
 
@@ -157,30 +208,16 @@ class TMDBService:
             Dictionary with movie details or None if not found
         """
         self.logger.debug(f"Fetching TMDB details for movie ID: {movie_id}")
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            try:
-                params = {"language": "en-US", "append_to_response": "external_ids"}  # This includes IMDB ID
 
-                response = await client.get(
-                    f"{self.base_url}/movie/{movie_id}", params=params, headers=self._get_headers()
-                )
-                response.raise_for_status()
-                details = response.json()
-                self.logger.debug(
-                    f"Successfully fetched details for movie ID {movie_id}: {details.get('title', 'Unknown')}"
-                )
-                return details
-            except httpx.TimeoutException:
-                self.logger.warning(f"TMDB details timeout for movie ID: {movie_id}")
-                return None
-            except httpx.HTTPStatusError as e:
-                self.logger.error(f"TMDB HTTP error {e.response.status_code} for movie ID: {movie_id}")
-                return None
-            except Exception as e:
-                self.logger.error(f"TMDB details error for movie ID {movie_id}: {e}")
-                return None
+        details_params = TMDBDetailsParams()
+        data = await self._make_request(f"movie/{movie_id}", details_params.api_params)
 
-    async def get_tv_details(self, tv_id: int) -> Optional[Dict[str, Any]]:
+        if data:
+            self.logger.debug(f"Successfully fetched details for movie ID {movie_id}: {data.get('title', 'Unknown')}")
+
+        return data
+
+    async def get_tv_details(self, tv_id: int) -> Optional[dict[str, Any]]:
         """
         Get detailed information about a TV series by ID.
 
@@ -191,23 +228,11 @@ class TMDBService:
             Dictionary with TV series details or None if not found
         """
         self.logger.debug(f"Fetching TMDB details for TV series ID: {tv_id}")
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            try:
-                params = {"language": "en-US", "append_to_response": "external_ids"}  # This includes IMDB ID
 
-                response = await client.get(f"{self.base_url}/tv/{tv_id}", params=params, headers=self._get_headers())
-                response.raise_for_status()
-                details = response.json()
-                self.logger.debug(
-                    f"Successfully fetched details for TV series ID {tv_id}: {details.get('name', 'Unknown')}"
-                )
-                return details
-            except httpx.TimeoutException:
-                self.logger.warning(f"TMDB details timeout for TV series ID: {tv_id}")
-                return None
-            except httpx.HTTPStatusError as e:
-                self.logger.error(f"TMDB HTTP error {e.response.status_code} for TV series ID: {tv_id}")
-                return None
-            except Exception as e:
-                self.logger.error(f"TMDB details error for TV series ID {tv_id}: {e}")
-                return None
+        details_params = TMDBDetailsParams()
+        data = await self._make_request(f"tv/{tv_id}", details_params.api_params)
+
+        if data:
+            self.logger.debug(f"Successfully fetched details for TV series ID {tv_id}: {data.get('name', 'Unknown')}")
+
+        return data
