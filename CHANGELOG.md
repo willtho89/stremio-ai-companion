@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.5]
+
+### Added
+- Configuration validation on save: tests LLM, TMDB, and RPDB connections
+- Meaningful error messages for configuration validation failures
+
+### Fixed
+- Configuration save now validates all services before creating manifest URLs
+
 ## [0.7.4]
 
 ### Fixed
