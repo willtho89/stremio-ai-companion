@@ -402,7 +402,7 @@ async def _cached_catalog(
 
     # Get existing cached entries
     cached_entries = await cache.aget(key)
-    if cached_entries is None:
+    if cached_entries is None or len(cached_entries["metas"]) == 0:
         cached_entries = {"metas": []}
         logger.debug(f"Cache miss for key={key}")
     else:

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.3]
+
+### Added
+- validation for TMDB key
+
+### Fixed
+- fix empty cache served for searches
+
 ## [0.7.2]
 
 ### Fixed

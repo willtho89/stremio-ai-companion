@@ -39,18 +39,30 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            font-size: 1rem;
-            backdrop-filter: blur(10px);
-            box-sizing: border-box;
-        }
-        input::placeholder {
+         input, select, textarea {
+             width: 100%;
+             padding: 0.75rem;
+             border: 2px solid rgba(255,255,255,0.2);
+             border-radius: 10px;
+             background: rgba(255,255,255,0.1);
+             color: white;
+             font-size: 1rem;
+             backdrop-filter: blur(10px);
+             box-sizing: border-box;
+         }
+         .invalid {
+             border-color: #f44336 !important;
+             background: rgba(244,67,54,0.1) !important;
+         }
+         .error-text {
+             color: #ffd2cf;
+             font-size: 0.8rem;
+             margin-top: 0.25rem;
+             display: none;
+         }
+         .error-text.show {
+             display: block;
+         }        input::placeholder {
             color: rgba(255,255,255,0.6);
         }
         input:focus, select:focus {
@@ -219,6 +231,7 @@
                     <button type="button" class="copy-btn" onclick="toggleVisibility('tmdb_read_access_token', this)" aria-label="Toggle visibility" style="position:absolute; right:0.5rem; top:5%; height:28px; display:flex; align-items:center; justify-content:center; padding:0 0.5rem; border-radius:6px; font-size:0.9rem; line-height:1;">👁️</button>
                 </div>
                 <div class="help-text">Get your free read access token from <a href="https://www.themoviedb.org/settings/api" target="_blank" style="color: rgba(255,255,255,0.8);">TMDB API Settings</a></div>
+                <div id="tmdb_error" class="error-text">This looks like a 32‑char API key. Please use your TMDB Read Access Token (JWT), not the API key.</div>
             </div>
             
             <div class="form-group">
@@ -280,8 +293,31 @@
             posterdbGroup.style.display = this.checked ? 'block' : 'none';
         });
 
-        document.getElementById('configForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+         function validateTmdbToken() {
+             const input = document.getElementById('tmdb_read_access_token');
+             const err = document.getElementById('tmdb_error');
+             const val = (input.value || '').trim();
+             let ok = true;
+             if (!val) {
+                 input.classList.remove('invalid');
+                 if (err) err.classList.remove('show');
+                 return true;
+             }
+             if (val.length <= 60 || val.length < 150 || val.length === 32) {
+                 input.classList.add('invalid');
+                 if (err) err.classList.add('show');
+                 ok = false;
+             } else {
+                 input.classList.remove('invalid');
+                 if (err) err.classList.remove('show');
+             }
+             return ok;
+         }
+
+         document.getElementById('tmdb_read_access_token').addEventListener('input', validateTmdbToken);
+         validateTmdbToken();
+
+         document.getElementById('configForm').addEventListener('submit', async function(e) {            e.preventDefault();
             
             const submitBtn = document.querySelector('.submit-btn');
             const result = document.getElementById('result');
