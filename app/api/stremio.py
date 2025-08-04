@@ -366,8 +366,7 @@ async def _cached_catalog(
     Cached version of the catalogue view with pagination support (Redis only).
     """
     cache = CACHE_INSTANCE
-    catalog_id = catalog_id.rstrip(f"_{content_type.value}")  # cleanup catalog_id
-    catalog_config = CATALOG_PROMPTS.get(catalog_id)
+    catalog_config = CATALOG_PROMPTS.get(catalog_id.rstrip(f"_{content_type.value}"), CATALOG_PROMPTS.get("trending"))
     prompt = catalog_config["prompt"]
 
     # Get TTL for this specific catalog
@@ -381,12 +380,6 @@ async def _cached_catalog(
 
     # Pagination only works with Redis cache
     if not cache.is_redis:
-        if skip > 0:
-            # For non-Redis cache, return empty results for pagination requests
-            logger.debug("Pagination not supported with LRU cache, returning empty results")
-            return {"metas": []}
-
-        # Fall back to original behavior for skip=0
         cached = await cache.aget(key)
         if cached is not None:
             logger.debug(f"Cache hit for key={key}")
