@@ -435,7 +435,7 @@
                                 <img class="content-poster" src="${item.poster || ''}" alt="${item.name}" onerror="this.style.display='none'">
                                 <div class="content-info">
                                     <h4>${item.name}</h4>
-                                    <p>${item.releaseInfo || 'Unknown year'} • ${item.imdbRating ? item.imdbRating.toFixed(1) + '/10' : 'No rating'}</p>
+                                    <p>${item.releaseInfo || 'Unknown year'} • ${item.imdbRating ? item.imdbRating + '/10' : 'No rating'}</p>
                                 </div>
                                 <div class="content-type-badge ${typeClass}">${typeIcon} ${typeLabel}</div>
                             </div>

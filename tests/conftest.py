@@ -82,6 +82,21 @@ def sample_tmdb_movie() -> Dict[str, Any]:
         "genres": [{"id": 18, "name": "Drama"}, {"id": 53, "name": "Thriller"}],
         "runtime": 139,
         "external_ids": {"imdb_id": "tt0137523"},
+        "credits": {
+            "cast": [
+                {"name": "Brad Pitt", "character": "Tyler Durden"},
+                {"name": "Edward Norton", "character": "The Narrator"},
+                {"name": "Helena Bonham Carter", "character": "Marla Singer"},
+                {"name": "Meat Loaf", "character": "Robert 'Bob' Paulson"},
+                {"name": "Jared Leto", "character": "Angel Face"},
+            ],
+            "crew": [
+                {"name": "David Fincher", "job": "Director"},
+                {"name": "Chuck Palahniuk", "job": "Writer"},
+                {"name": "Jim Uhls", "job": "Screenplay"},
+                {"name": "Ross Grayson Bell", "job": "Producer"},
+            ],
+        },
     }
 
 
@@ -98,8 +113,11 @@ def sample_stremio_meta() -> StremioMeta:
         background="https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg",
         description="A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy.",
         releaseInfo="1999",
-        imdbRating=8.4,
+        imdbRating="8.4",
         genre=["Drama", "Thriller"],
+        cast=["Brad Pitt", "Edward Norton", "Helena Bonham Carter", "Meat Loaf", "Jared Leto"],
+        director=["David Fincher"],
+        writer=["Chuck Palahniuk", "Jim Uhls"],
         runtime="139 min",
     )
 
@@ -140,4 +158,19 @@ def sample_tmdb_tv() -> Dict[str, Any]:
         ],
         "episode_run_time": [60],
         "external_ids": {"imdb_id": "tt0944947"},
+        "credits": {
+            "cast": [
+                {"name": "Peter Dinklage", "character": "Tyrion Lannister"},
+                {"name": "Lena Headey", "character": "Cersei Lannister"},
+                {"name": "Emilia Clarke", "character": "Daenerys Targaryen"},
+                {"name": "Kit Harington", "character": "Jon Snow"},
+                {"name": "Sophie Turner", "character": "Sansa Stark"},
+            ],
+            "crew": [
+                {"name": "David Benioff", "job": "Writer"},
+                {"name": "D.B. Weiss", "job": "Writer"},
+                {"name": "George R.R. Martin", "job": "Story"},
+                {"name": "Tim Van Patten", "job": "Director"},
+            ],
+        },
     }

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1]
+
+### Added
+- Logos
+
+### Fix
+- imdbRating as str
+
 ## [0.8.0]
 
 ### Added

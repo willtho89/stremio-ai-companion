@@ -22,7 +22,7 @@ class TestMovieToStremioMeta:
             == "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy."
         )
         assert result["releaseInfo"] == "1999"
-        assert result["imdbRating"] == 8.4
+        assert result["imdbRating"] == "8.4"
         assert result["genre"] == ["Drama", "Thriller"]
         assert result["runtime"] == "139 min"
 
@@ -109,7 +109,7 @@ class TestTVToStremioMeta:
         assert result["background"] == "https://image.tmdb.org/t/p/w1280/suopoADq0k8YZr4dQXcU6pToj6s.jpg"
         assert result["description"] == "Seven noble families fight for control of the mythical land of Westeros."
         assert result["releaseInfo"] == "2011"
-        assert result["imdbRating"] == 9.3
+        assert result["imdbRating"] == "9.3"
         assert result["genre"] == ["Sci-Fi & Fantasy", "Drama", "Action & Adventure"]
         assert result["runtime"] == "60 min/ep"
 

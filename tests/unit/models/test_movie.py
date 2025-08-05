@@ -57,7 +57,7 @@ class TestStremioMeta:
             background="https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg",
             description="A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy.",
             releaseInfo="1999",
-            imdbRating=8.4,
+            imdbRating="8.4",
             genre=["Drama", "Thriller"],
             runtime="139 min",
         )
@@ -72,7 +72,7 @@ class TestStremioMeta:
             == "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy."
         )
         assert meta.releaseInfo == "1999"
-        assert meta.imdbRating == 8.4
+        assert meta.imdbRating == "8.4"
         assert meta.genre == ["Drama", "Thriller"]
         assert meta.runtime == "139 min"
 
@@ -119,3 +119,32 @@ class TestStremioMeta:
         assert "imdbRating" not in dumped
         assert "genre" not in dumped
         assert "runtime" not in dumped
+
+    def test_imdb_rating_validation(self):
+        """Test imdbRating field validation and conversion."""
+        # Test with float input
+        meta_float = StremioMeta(id="tmdb:123", name="Test Movie", imdbRating=8.4)
+        assert meta_float.imdbRating == "8.4"
+
+        # Test with int input
+        meta_int = StremioMeta(id="tmdb:123", name="Test Movie", imdbRating=8)
+        assert meta_int.imdbRating == "8.0"
+
+        # Test with string input
+        meta_str = StremioMeta(id="tmdb:123", name="Test Movie", imdbRating="7.5")
+        assert meta_str.imdbRating == "7.5"
+
+        # Test with string that needs formatting
+        meta_str_format = StremioMeta(id="tmdb:123", name="Test Movie", imdbRating="7")
+        assert meta_str_format.imdbRating == "7.0"
+
+        # Test with None
+        meta_none = StremioMeta(id="tmdb:123", name="Test Movie", imdbRating=None)
+        assert meta_none.imdbRating is None
+
+    def test_imdb_rating_invalid_input(self):
+        """Test imdbRating field validation with invalid input."""
+        with pytest.raises(ValidationError) as exc_info:
+            StremioMeta(id="tmdb:123", name="Test Movie", imdbRating="invalid")
+
+        assert "imdbRating must be a valid number" in str(exc_info.value)

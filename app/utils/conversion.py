@@ -61,6 +61,10 @@ def content_to_stremio_meta(
 
     imdb_id = content_data.get("external_ids", {}).get("imdb_id")
 
+    if imdb_id:
+        logo = f"https://images.metahub.space/logo/medium/{imdb_id}/img"
+    else:
+        logo = None
     behavior_hints = None
     if content_type == ContentType.MOVIE:
         behavior_hints = {"defaultVideoId": imdb_id, "hasScheduledVideos": None}
@@ -81,6 +85,7 @@ def content_to_stremio_meta(
             if content_data.get("backdrop_path")
             else None
         ),
+        logo=logo,
         description=content_data.get("overview", ""),
         releaseInfo=release_info,
         imdbRating=content_data.get("vote_average"),
