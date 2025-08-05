@@ -30,22 +30,22 @@ def get_tuesday_to_tuesday_ttl():
 CATALOG_PROMPTS = {
     "trending": {
         "title": "Trending this week",
-        "prompt": "Show me what's trending this week on streaming services (priority), but include notable on-demand rentals or Blu-ray releases if relevant",
+        "prompt": "Show me what's trending this week on streaming services and (P)VOD (or Blu-ray releases if relevant).",
         "cache_ttl": get_tuesday_to_tuesday_ttl,  # Dynamic TTL until next Tuesday
     },
     "new_releases": {
         "title": "New releases",
-        "prompt": "Show me the latest new releases available to stream right now; also include notable on-demand rentals or Blu-ray releases when applicable",
+        "prompt": "Show me the latest new releases available to stream or on (P)VOD right now.",
         "cache_ttl": 172800,  # 48 hours
     },
     "critics_picks": {
         "title": "Critics' picks",
-        "prompt": "Show me highly-rated titles from critics and award winners that are available on streaming services; optionally include notable on-demand or Blu-ray if streaming is unavailable",
+        "prompt": "Show me highly-rated titles from critics and award winners that are available on streaming services or (P)VOD.",
         "cache_ttl": 604800,  # 7 days
     },
     "hidden_gems": {
         "title": "Hidden gems",
-        "prompt": "Show me underrated or lesser-known titles worth watching on streaming services; if not streaming, include notable on-demand or Blu-ray",
+        "prompt": "Show me underrated or lesser-known titles worth watching.",
         "cache_ttl": 1209600,  # 14 days
     },
 }

@@ -96,8 +96,6 @@ class LLMService:
 You will provide structured {instructions['content_name']} recommendations with the following fields:
 - title: The exact {instructions['content_name']} title (without year)
 - year: The {instructions['date_description']} as an integer
-- streaming_platform: The primary streaming platform if known (optional)
-- note: Additional context like "New this week", "Trending", etc. (optional)
 
 CRITICAL INSTRUCTION FOR STREAMING/CURRENT CONTENT QUERIES:
 If the user asks about:
@@ -106,8 +104,6 @@ If the user asks about:
 - New releases on streaming platforms
 - What's coming to streaming services
 - Current streaming content
-- Return only {instructions['content_plural']} recommendations.
-- Do NOT return {instructions['avoid_label']}!
 
 YOU MUST:
 1. If possible use web search to find current information (your training data is outdated for this)
@@ -162,7 +158,7 @@ For GENRE/MOOD recommendations:
 
 CRITICAL REQUIREMENTS:
 - You must return not more than {max_results} {instructions['content_plural']}
-- Return only {instructions['content_plural']} recommendations, do not return {instructions['avoid_label']}
+- Return only {instructions['content_plural']} recommendations, do NOT return {instructions['avoid_label']}
 - Each entry MUST have a title (string) and year (integer)
 - The year must be accurate - this is critical for identification
 - For streaming queries, use web search to ensure current information

@@ -2,4 +2,4 @@
 Stremio AI Companion - Your AI-powered movie discovery companion for Stremio
 """
 
-__version__ = "0.8.2"
+__version__ = "0.8.3"

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.3]
+
+### Changes
+- Updated Prompt
+
 ## [0.8.2]
 
 ### Fix
