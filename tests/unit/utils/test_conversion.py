@@ -12,7 +12,7 @@ class TestMovieToStremioMeta:
         """Test conversion with complete movie data."""
         result = movie_to_stremio_meta(sample_tmdb_movie)
 
-        assert result["id"] == "tmdb:550"
+        assert result["id"] == "tt0137523"
         assert result["type"] == "movie"
         assert result["name"] == "Fight Club"
         assert result["poster"] == "https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
@@ -84,7 +84,7 @@ class TestMovieToStremioMeta:
 
         result = movie_to_stremio_meta(minimal_movie)
 
-        assert result["id"] == "tmdb:123"
+        assert result["id"] == "aic:123"
         assert result["type"] == "movie"
         assert result["name"] == "Minimal Movie"
         assert "poster" not in result
@@ -102,7 +102,7 @@ class TestTVToStremioMeta:
         """Test conversion with complete TV series data."""
         result = tv_to_stremio_meta(sample_tmdb_tv)
 
-        assert result["id"] == "tmdb:1399"
+        assert result["id"] == "tt0944947"
         assert result["type"] == "series"
         assert result["name"] == "Game of Thrones"
         assert result["poster"] == "https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg"
@@ -144,7 +144,7 @@ class TestTVToStremioMeta:
 
         result = tv_to_stremio_meta(minimal_tv)
 
-        assert result["id"] == "tmdb:123"
+        assert result["id"] == "aic:123"
         assert result["type"] == "series"
         assert result["name"] == "Minimal Series"
         assert "poster" not in result

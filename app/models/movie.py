@@ -81,3 +81,7 @@ class StremioMeta(BaseModel):
     runtime: Optional[str] = None
     imdb_id: Optional[str] = None
     behaviorHints: Optional[dict] = None
+
+
+class StremioResponse(BaseModel):
+    metas: List[StremioMeta] = Field(description="List of Stremio metadata objects", default_factory=list)

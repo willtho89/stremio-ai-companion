@@ -68,7 +68,11 @@ def content_to_stremio_meta(
         behavior_hints = {"defaultVideoId": None, "hasScheduledVideos": True}
 
     meta = StremioMeta(
-        id=imdb_id,
+        id=(
+            imdb_id
+            if imdb_id
+            else f"aic:{content_data.get('id') or content_data.get('tv_id') or content_data.get('id') or 'unknown'}"
+        ),
         type=content_type.value,
         name=content_data.get("title", content_data.get("name")),
         poster=poster_url or tmdb_poster,

@@ -9,7 +9,6 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.staticfiles import StaticFiles
-from starlette.responses import Response
 from starlette.types import Scope, Receive, Send
 
 from app import __version__
@@ -41,11 +40,7 @@ class CachedStaticFiles(StaticFiles):
 async def lifespan(app: FastAPI):
     cache = CACHE_INSTANCE
     if cache.is_redis:
-        try:
-            await cache._redis.ping()  # type: ignore
-            logger.info("Cache backend: Redis connected on startup")
-        except Exception:
-            logger.warning("Redis configured but unreachable on startup; falling back to LRU")
+        logger.info("Cache backend: Redis")
     else:
         logger.info("Cache backend: in-memory LRU")
     yield

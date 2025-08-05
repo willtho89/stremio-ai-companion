@@ -24,7 +24,7 @@ class RPDBService:
         self.api_key = api_key
         self.logger = logging.getLogger("stremio_ai_companion.RPDBService")
 
-    async def get_poster(self, imdb_id: str) -> Optional[str]:
+    def get_poster(self, imdb_id: str) -> Optional[str]:
         """
         Get a poster URL for a movie by IMDB ID.
 
