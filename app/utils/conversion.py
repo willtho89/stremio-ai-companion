@@ -67,7 +67,7 @@ def content_to_stremio_meta(
         logo = None
     behavior_hints = None
     if content_type == ContentType.MOVIE:
-        behavior_hints = {"defaultVideoId": imdb_id, "hasScheduledVideos": None}
+        behavior_hints = {"defaultVideoId": imdb_id, "hasScheduledVideos": False}
     else:
         behavior_hints = {"defaultVideoId": None, "hasScheduledVideos": True}
 

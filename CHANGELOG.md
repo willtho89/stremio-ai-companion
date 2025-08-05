@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.2]
+
+### Fix
+- hasScheduledVideos is bool
+
 ## [0.8.1]
 
 ### Added
