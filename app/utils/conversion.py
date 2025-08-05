@@ -39,14 +39,36 @@ def content_to_stremio_meta(
             avg_runtime = sum(episode_runtime) // len(episode_runtime)
             runtime_str = f"{avg_runtime} min/ep"
 
-    # Handle release date based on content type
-    release_date_field = "release_date" if content_type == ContentType.MOVIE else "first_air_date"
-    release_info = (
-        content_data.get(release_date_field, "").split("-")[0] if content_data.get(release_date_field) else None
-    )
+    # Handle release info based on content type
+    if content_type == ContentType.MOVIE:
+        release_date_field = "release_date"
+        release_info = (
+            content_data.get(release_date_field, "").split("-")[0] if content_data.get(release_date_field) else None
+        )
+    else:
+        start = content_data.get("first_air_date")
+        end = content_data.get("last_air_date")
+        in_production = content_data.get("in_production")
+        start_year = start.split("-")[0] if start else None
+        end_year = None
+        if in_production:
+            end_year = ""
+        elif end:
+            end_year = end.split("-")[0]
+        release_info = None
+        if start_year is not None:
+            release_info = f"{start_year}-{end_year}" if end_year is not None else start_year
+
+    imdb_id = content_data.get("external_ids", {}).get("imdb_id")
+
+    behavior_hints = None
+    if content_type == ContentType.MOVIE:
+        behavior_hints = {"defaultVideoId": imdb_id, "hasScheduledVideos": None}
+    else:
+        behavior_hints = {"defaultVideoId": None, "hasScheduledVideos": True}
 
     meta = StremioMeta(
-        id=f"tmdb:{content_data.get('id')}",
+        id=imdb_id,
         type=content_type.value,
         name=content_data.get("title", content_data.get("name")),
         poster=poster_url or tmdb_poster,
@@ -60,6 +82,8 @@ def content_to_stremio_meta(
         imdbRating=content_data.get("vote_average"),
         genre=[genre["name"] for genre in content_data.get("genres", [])] if content_data.get("genres") else None,
         runtime=runtime_str,
+        imdb_id=imdb_id,
+        behaviorHints=behavior_hints,
     )
 
     return meta.model_dump(exclude_none=True)

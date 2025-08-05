@@ -79,3 +79,5 @@ class StremioMeta(BaseModel):
     imdbRating: Optional[float] = None
     genre: Optional[List[str]] = None
     runtime: Optional[str] = None
+    imdb_id: Optional[str] = None
+    behaviorHints: Optional[dict] = None
