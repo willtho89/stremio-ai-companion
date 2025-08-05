@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0]
+
+### Added
+- Poster URLs are done on a per config base (TMDB or PosterDB)
+
+### Fix
+- Use IMDB_ID where possible to better work with default stremio clients
+
 ## [0.7.5]
 
 ### Added
