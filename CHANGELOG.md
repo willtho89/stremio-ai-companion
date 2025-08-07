@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1]
+
+### Changed
+- Configure/Preview: Add disclaimer that changing settings alters the manifest URL and requires re-adding the addon in Stremio
+
 ## [0.9.0]
 
 ### Added

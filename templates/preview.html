@@ -257,9 +257,13 @@
         <img src="/static/logo2_256.png" alt="Stremio AI" style="width:72px;height:72px;border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,0.25);margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto;">
         <a href="#" onclick="goBackToConfigure()" class="back-link">← Back to Configure</a>
         <h1>Preview Your AI Companion</h1>
-        
+
+        <p style="background: rgba(255,255,255,0.1); padding: 0.75rem 1rem; border-radius: 10px; margin: 0 0 1.5rem 0; font-size: 0.9rem;">
+            ℹ️ If you changed any settings, the manifest URL changes. You must re-add the addon in Stremio using the new URL.
+        </p>
+
         {% include 'manifest_section.html' %}
-        
+
         <div class="config-section">
             <h3>⚙️ Configuration Summary</h3>
             <p style="margin-bottom: 1rem;">
