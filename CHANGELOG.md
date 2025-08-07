@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Configure/Preview: Add disclaimer that changing settings alters the manifest URL and requires re-adding the addon in Stremio
+- Make max results a slider to prevent average users from inputting too high numbers and running into timeouts
 
 ## [0.9.0]
 

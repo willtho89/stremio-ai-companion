@@ -62,8 +62,8 @@ class Config(BaseModel):
     @field_validator("max_results")
     @classmethod
     def validate_max_results(cls, v):
-        if v < 1 or v > 50:
-            raise ValueError("Max results must be between 1 and 50")
+        if v < 1:
+            raise ValueError("Max results must be at least 1")
         return v
 
     @field_validator("openai_base_url")
