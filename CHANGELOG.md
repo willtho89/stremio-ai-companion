@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0]
+
+### Added
+- Catalog Selection. Makes it possible to select a catalog to use. 
+
+### Removed
+- Adult search for TMDB. This relaxes the cache a bit.  
+
 ## [0.8.3]
 
 ### Changes

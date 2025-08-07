@@ -13,8 +13,21 @@ from starlette.templating import Jinja2Templates
 from app.core.config import settings
 from app.core.logging import logger
 from app.models.config import Config
+from app.models.enums import LLMProvider
+from app.services import CATALOG_PROMPTS
 from app.services.encryption import encryption_service
 from app.services.validation import ConfigValidationService
+
+
+def _catalog_prompts_serializable():
+    out = {}
+    for k, v in CATALOG_PROMPTS.items():
+        out[k] = {
+            "title": v.get("title"),
+            "prompt": v.get("prompt"),
+            "cache_ttl": v.get("cache_ttl")() if callable(v.get("cache_ttl")) else v.get("cache_ttl"),
+        }
+    return out
 
 
 def get_request_scheme(request: Request) -> str:
@@ -80,11 +93,18 @@ async def configure_page(request: Request, config: Optional[str] = Query(None), 
 
     # Set adult flag from URL parameter if provided
     if adult is not None:
-        adult_flag = bool(adult)
+        adult_flag = False
 
     return templates.TemplateResponse(
         "configure.html",
-        {"request": request, "existing_config": existing_config, "adult_flag": adult_flag, "settings": settings},
+        {
+            "request": request,
+            "existing_config": existing_config,
+            "adult_flag": adult_flag,
+            "settings": settings,
+            "LLMProvider": LLMProvider,
+            "CATALOG_PROMPTS": _catalog_prompts_serializable(),
+        },
     )
 
 
@@ -138,6 +158,9 @@ async def save_config(
     include_adult: Optional[str] = Form(None),
     use_posterdb: Optional[str] = Form(None),
     posterdb_api_key: str = Form(""),
+    include_catalogs_movies: Optional[list[str]] = Form(None),
+    include_catalogs_series: Optional[list[str]] = Form(None),
+    changed_catalogs: Optional[str] = Form("false"),
 ):
     """
     Save configuration settings and return manifest URL.
@@ -147,7 +170,6 @@ async def save_config(
     """
     try:
         # Handle checkboxes: if not present in form data, it means False
-        include_adult_bool = include_adult == "on" if include_adult else False
         use_posterdb_bool = use_posterdb == "on" if use_posterdb else False
 
         config = Config(
@@ -158,6 +180,9 @@ async def save_config(
             max_results=max_results,
             use_posterdb=use_posterdb_bool,
             posterdb_api_key=posterdb_api_key if posterdb_api_key else None,
+            include_catalogs_movies=include_catalogs_movies,
+            include_catalogs_series=include_catalogs_series,
+            changed_catalogs=(changed_catalogs == "true"),
         )
 
         # Validate configuration by testing connections
@@ -172,7 +197,7 @@ async def save_config(
         scheme = get_request_scheme(request)
 
         # Build manifest URLs for all types
-        adult_flag = 1 if include_adult_bool else 0
+        adult_flag = 0
         base_url = f"{scheme}://{request.url.netloc}/config/{encrypted_config}/adult/{adult_flag}"
         manifest_urls = {
             "combined": f"{base_url}/manifest.json",
@@ -204,9 +229,9 @@ async def save_config(
 @router.get("/config/{config}/adult/{adult}/{content_type}/configure")
 async def reconfigure_page_redirect(config: str, adult: int, content_type: str):
     """
-    Redirect to configure page with existing config and adult flag (content type agnostic).
+    Redirect to configure page with existing config (content type agnostic).
     """
-    return RedirectResponse(url=f"/configure?config={config}&adult={adult}")
+    return RedirectResponse(url=f"/configure?config={config}")
 
 
 @router.get("/config/{config}")

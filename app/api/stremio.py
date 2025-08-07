@@ -121,7 +121,13 @@ async def _process_metadata_pipeline(
         return []
 
 
-def build_manifest(types: Optional[List[str]] = None) -> dict:
+def build_manifest(
+    types: Optional[List[str]] = None,
+    include_catalogs_movies: Optional[list[str]] = None,
+    include_catalogs_series: Optional[list[str]] = None,
+    *,
+    changed_catalogs: bool = False,
+) -> dict:
     """
     Build a Stremio manifest with specified content types.
 
@@ -162,16 +168,19 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
                     "extra": [{"name": "search", "isRequired": True}],
                 }
             )
-            if settings.ENABLE_FEED_CATALOGS:
+            if settings.ENABLE_FEED_CATALOGS and (
+                changed_catalogs and include_catalogs_movies is not None or not changed_catalogs
+            ):
+                allowed = set(include_catalogs_movies) if changed_catalogs else set(CATALOG_PROMPTS.keys())
                 for cid, cfg in CATALOG_PROMPTS.items():
-                    catalogs.append(
-                        {
-                            "type": "movie",
-                            "id": f"{cid}_movie",
-                            "name": cfg["title"],
-                            # "extra": [{"name": "search", "isRequired": False}],
-                        }
-                    )
+                    if cid in allowed:
+                        catalogs.append(
+                            {
+                                "type": "movie",
+                                "id": f"{cid}_movie",
+                                "name": cfg["title"],
+                            }
+                        )
         elif content_type == "series":
             catalogs.append(
                 {
@@ -181,16 +190,19 @@ def build_manifest(types: Optional[List[str]] = None) -> dict:
                     "extra": [{"name": "search", "isRequired": True}],
                 }
             )
-            if settings.ENABLE_FEED_CATALOGS:
+            if settings.ENABLE_FEED_CATALOGS and (
+                changed_catalogs and include_catalogs_series is not None or not changed_catalogs
+            ):
+                allowed = set(include_catalogs_series) if changed_catalogs else set(CATALOG_PROMPTS.keys())
                 for cid, cfg in CATALOG_PROMPTS.items():
-                    catalogs.append(
-                        {
-                            "type": "series",
-                            "id": f"{cid}_series",
-                            "name": cfg["title"],
-                            # "extra": [{"name": "search", "isRequired": False}],
-                        }
-                    )
+                    if cid in allowed:
+                        catalogs.append(
+                            {
+                                "type": "series",
+                                "id": f"{cid}_series",
+                                "name": cfg["title"],
+                            }
+                        )
 
     return {
         "id": addon_id,
@@ -217,7 +229,13 @@ async def get_manifest(config: str, adult: int):
         # validate model
         Config.model_validate(json.loads(config_data))
 
-        return build_manifest(None)  # Combined manifest
+        config_obj = Config.model_validate(json.loads(config_data))
+        return build_manifest(
+            None,
+            config_obj.include_catalogs_movies,
+            config_obj.include_catalogs_series,
+            changed_catalogs=config_obj.changed_catalogs,
+        )
     except Exception as e:
         logger.error(f"Manifest request failed: {e}")
         raise HTTPException(status_code=400, detail="Invalid config")
@@ -233,7 +251,10 @@ async def get_movie_manifest(config: str, adult: int):
         # validate model
         Config.model_validate(json.loads(config_data))
 
-        return build_manifest(["movie"])
+        config_obj = Config.model_validate(json.loads(config_data))
+        return build_manifest(
+            ["movie"], config_obj.include_catalogs_movies, None, changed_catalogs=config_obj.changed_catalogs
+        )
     except Exception as e:
         logger.error(f"Movie manifest request failed: {e}")
         raise HTTPException(status_code=400, detail="Invalid config")
@@ -249,7 +270,10 @@ async def get_series_manifest(config: str, adult: int):
         # validate model
         Config.model_validate(json.loads(config_data))
 
-        return build_manifest(["series"])
+        config_obj = Config.model_validate(json.loads(config_data))
+        return build_manifest(
+            ["series"], None, config_obj.include_catalogs_series, changed_catalogs=config_obj.changed_catalogs
+        )
     except Exception as e:
         logger.error(f"Series manifest request failed: {e}")
         raise HTTPException(status_code=400, detail="Invalid config")
@@ -293,7 +317,7 @@ async def _process_catalog_request_internal(
             try:
                 cleaned = slugify(search, separator="")
                 if cleaned:
-                    key = f"search:{content_type.value}{':adult' if include_adult else ''}:{cleaned}"
+                    key = f"search:{content_type.value}:{cleaned}"
             except Exception:
                 key = None
 
@@ -401,7 +425,7 @@ async def _cached_catalog(
     elif catalog_ttl is None:
         catalog_ttl = cache.ttl  # Use default cache TTL
 
-    key = f"catalog:{catalog_id}{':adult' if include_adult else ''}"
+    key = f"catalog:{catalog_id}"
 
     # Pagination only works with Redis cache
     if not cache.is_redis:
@@ -500,7 +524,7 @@ async def get_catalog(config: str, adult: int, content_type: ContentType, catalo
 
     This endpoint is called by Stremio to get movie metadata based on a search query.
     """
-    content = await _cached_catalog(config, content_type, catalog_id, include_adult=bool(adult))
+    content = await _cached_catalog(config, content_type, catalog_id, include_adult=False)
     return StremioResponse(**content)
 
 
@@ -508,7 +532,7 @@ async def get_catalog(config: str, adult: int, content_type: ContentType, catalo
 async def get_catalog_split(
     config: str, adult: int, content_type_extra: str | None, content_type: ContentType, catalog_id: str
 ) -> StremioResponse:
-    content = await _cached_catalog(config, content_type, catalog_id, include_adult=bool(adult))
+    content = await _cached_catalog(config, content_type, catalog_id, include_adult=False)
     return StremioResponse(**content)
 
 
@@ -521,7 +545,7 @@ async def get_catalog_with_skip(
 
     This endpoint is called by Stremio when it reaches the end of the catalog list.
     """
-    content = await _cached_catalog(config, content_type, catalog_id, skip, include_adult=bool(adult))
+    content = await _cached_catalog(config, content_type, catalog_id, skip, include_adult=False)
     return StremioResponse(**content)
 
 
@@ -534,7 +558,7 @@ async def get_catalog_with_skip_split(
 
     This endpoint is called by Stremio when it reaches the end of the catalog list.
     """
-    content = await _cached_catalog(config, content_type, catalog_id, skip, include_adult=bool(adult))
+    content = await _cached_catalog(config, content_type, catalog_id, skip, include_adult=False)
     return StremioResponse(**content)
 
 
@@ -549,7 +573,7 @@ async def get_catalog_search(
     """
     # Always use the non-cached version for explicit searches
     content = await _process_catalog_request(
-        config, search, content_type, bool(adult), cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL
+        config, search, content_type, False, cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL
     )
     return StremioResponse(**content)
 
@@ -567,7 +591,7 @@ async def get_catalog_search_split(
     """
     # Always use the non-cached version for explicit searches
     content = await _process_catalog_request(
-        config, search, content_type, bool(adult), cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL
+        config, search, content_type, False, cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL
     )
     return StremioResponse(**content)
 

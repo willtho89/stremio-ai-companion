@@ -26,6 +26,9 @@ class Config(BaseModel):
     max_results: int = 20
     use_posterdb: bool = False
     posterdb_api_key: Optional[str] = None
+    include_catalogs_movies: Optional[list[str]] = None
+    include_catalogs_series: Optional[list[str]] = None
+    changed_catalogs: bool = False
 
     def __init__(self, **data):
         # Use .env values as defaults if not provided (but not if explicitly set to empty)

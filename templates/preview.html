@@ -343,10 +343,10 @@
             contentResults.innerHTML = '<p>Loading...</p>';
             
             try {
-                // Extract config and adult from current path: /config/{config}/adult/{adult}/preview
+                // Extract config from current path: /config/{config}/adult/{adult}/preview
                 const pathParts = window.location.pathname.split('/');
                 const config = pathParts[2];
-                const adult = pathParts[4] || '0';
+                const adult = '0';
                 
                 // Determine which catalogs to search based on selected manifest type
                 const activeGroup = document.querySelector('.manifest-group .manifest-url[style*="display: block"], .manifest-group .manifest-url[style*="display:block"]');

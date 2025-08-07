@@ -151,7 +151,7 @@ class TMDBService:
         """
         self.logger.debug(f"Searching TMDB for movie: '{title}'" + (f" ({year})" if year else ""))
 
-        search_params = TMDBMovieSearchParams(query=title, year=year, include_adult=include_adult)
+        search_params = TMDBMovieSearchParams(query=title, year=year, include_adult=False)
 
         data = await self._make_request("search/movie", search_params.api_params)
 
@@ -182,7 +182,7 @@ class TMDBService:
         """
         self.logger.debug(f"Searching TMDB for TV series: '{title}'" + (f" ({year})" if year else ""))
 
-        search_params = TMDBTVSearchParams(query=title, year=year, include_adult=include_adult)
+        search_params = TMDBTVSearchParams(query=title, year=year, include_adult=False)
 
         data = await self._make_request("search/tv", search_params.api_params)
 

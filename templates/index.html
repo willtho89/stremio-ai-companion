@@ -86,7 +86,7 @@
         
         <div style="margin-top: 2rem; text-align: center;">
             <p style="opacity: 0.8; margin-bottom: 1rem;">Already have a config? Paste your manifest URL to edit:</p>
-            <p style="opacity: 0.7; margin: 0.5rem 0 1rem; font-size: 0.85rem;">Supports: /config/{id}/manifest.json, /config/{id}/adult/{0|1}/manifest.json, /config/{id}/{movie|series}/manifest.json</p>
+            <p style="opacity: 0.7; margin: 0.5rem 0 1rem; font-size: 0.85rem;">Supports: /config/{id}/manifest.json, /config/{id}/{movie|series}/manifest.json</p>
             <div style="display: flex; gap: 0.5rem; max-width: 500px; margin: 0 auto;">
                 <input type="text" id="configUrl" placeholder="https://yourserver.com/config/abc123/manifest.json" 
                        style="flex: 1; padding: 0.75rem; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; background: rgba(255,255,255,0.1); color: white; font-size: 0.9rem;" onpaste="return true">
@@ -107,14 +107,13 @@
                     
                     // Extract config from path-based formats:
                     // - /config/{config}/manifest.json (combined)
-                    // - /config/{config}/adult/{adult}/manifest.json (combined with adult flag)
+                    // - /config/{config}/adult/{adult}/manifest.json (deprecated - adult flag ignored)
                     // - /config/{config}/movie/manifest.json (movie)
                     // - /config/{config}/series/manifest.json (series)
-                    const pathMatch = urlObj.pathname.match(/\/config\/([^\/]+)(?:\/adult\/([01]))?(?:\/(?:movie|series))?\/manifest\.json$/);
+                    const pathMatch = urlObj.pathname.match(/\/config\/([^\/]+)\/.+\/manifest\.json$/);
                     if (pathMatch) {
                         const config = pathMatch[1];
-                        const adult = pathMatch[2];
-                        const qs = adult ? `?config=${encodeURIComponent(config)}&adult=${encodeURIComponent(adult)}` : `?config=${encodeURIComponent(config)}`;
+                        const qs = `?config=${encodeURIComponent(config)}`;
                         window.location.href = `/configure${qs}`;
                     } else {
                         alert('No config found in the URL. Please use one of: /config/{config}/manifest.json, /config/{config}/movie/manifest.json, or /config/{config}/series/manifest.json');

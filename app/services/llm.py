@@ -26,6 +26,7 @@ class LLMService:
     def __init__(self, config: Config):
         self.client = openai.AsyncOpenAI(api_key=config.openai_api_key, base_url=config.openai_base_url)
         self.model = config.model_name
+        self.base_url = config.openai_base_url or ""
         self.logger = logging.getLogger("stremio_ai_companion.LLMService")
         self._default_timeout = 30
         self._default_temperature = 0.7
@@ -266,6 +267,17 @@ If this is about current streaming content, use web search for accurate informat
         messages = self._build_messages(query, max_results, content_type)
         response_model, field_name = self._get_response_config(content_type)
 
+        if self.base_url.endswith("/v1beta/openai/"):
+            try:
+                suggestions = await self._try_fallback_completion(messages, response_model, field_name, max_results)
+                return suggestions
+            except Exception as fallback_e:
+                self.logger.error(f"Fallback completion failed with Gemini base URL: {fallback_e}")
+                if content_type == ContentType.MOVIE:
+                    return [MovieSuggestion(title=query, year=2024)]
+                else:
+                    return [TVSeriesSuggestion(title=query, year=2024)]
+
         try:
             suggestions = await self._try_structured_completion(messages, response_model, field_name, max_results)
             return suggestions
@@ -276,14 +288,12 @@ If this is about current streaming content, use web search for accurate informat
                 return suggestions
             except Exception as fallback_e:
                 self.logger.error(f"Fallback completion also failed: {fallback_e}")
-                # Return a fallback suggestion as a Pydantic model
                 if content_type == ContentType.MOVIE:
                     return [MovieSuggestion(title=query, year=2024)]
                 else:
                     return [TVSeriesSuggestion(title=query, year=2024)]
         except Exception as e:
             self.logger.error(f"An unexpected LLM service error occurred: {e}")
-            # Return a fallback suggestion as a Pydantic model
             if content_type == ContentType.MOVIE:
                 return [MovieSuggestion(title=query, year=2024)]
             else:

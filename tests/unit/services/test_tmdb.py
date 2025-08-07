@@ -83,10 +83,10 @@ class TestTMDBService:
         # Call the method
         await tmdb_service.search_movie("Fight Club", include_adult=True)
 
-        # Verify the API was called with adult content included
+        # Verify the API was called with adult content excluded
         mock_get.assert_called_once()
         args, kwargs = mock_get.call_args
-        assert kwargs["params"]["include_adult"] == "true"
+        assert kwargs["params"]["include_adult"] == "false"
 
     @patch("httpx.AsyncClient.get")
     async def test_search_movie_no_results(self, mock_get, tmdb_service):

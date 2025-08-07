@@ -183,10 +183,10 @@
                 <select id="openai_base_url" name="openai_base_url">
                     {% set current_base = existing_config.openai_base_url if existing_config else settings.OPENAI_BASE_URL %}
                     {% set bases = {
-                        'https://openrouter.ai/api/v1': 'OpenRouter',
-                        'https://api.openai.com/v1': 'OpenAI',
-                        'https://api.anthropic.com/v1': 'Anthropic',
-                        'https://generativelanguage.googleapis.com/v1beta/openai/': 'Google Gemini (OpenAI Compatible)'
+                        LLMProvider.OPENROUTER.value: 'OpenRouter',
+                        LLMProvider.OPENAI.value: 'OpenAI',
+                        LLMProvider.ANTHROPIC.value: 'Anthropic',
+                        LLMProvider.GEMINI.value: 'Google Gemini (OpenAI Compatible)'
                     } %}
                     {% for url,label in bases.items() %}
                     <option value="{{ url }}" {% if current_base == url %}selected{% endif %}>{{ label }} ({{ url }})</option>
@@ -241,13 +241,7 @@
                 <div class="help-text">Maximum number of movies to return per search</div>
             </div>
             
-            <div class="form-group">
-                <div class="checkbox-group">
-                    <input type="checkbox" id="include_adult" name="include_adult" {% if adult_flag %}checked{% endif %}>
-                    <label for="include_adult">Include adult content in search results</label>
-                </div>
-                <div class="help-text">Allow adult/mature content to appear in movie search results</div>
-            </div>
+            
             
 
             
@@ -268,6 +262,25 @@
                 <div class="help-text">Optional: Enhanced movie posters from <a href="https://ratingposterdb.com" target="_blank" style="color: rgba(255,255,255,0.8);">RPDB</a></div>
             </div>
             
+            <input type="hidden" id="changed_catalogs" name="changed_catalogs" value="false">
+            <div style="display:flex; gap:1rem; align-items:flex-start; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1; min-width:260px;">
+                    <label>Include Feed Catalogs (Movies)</label>
+                    <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                        <button type="button" class="copy-btn" id="select_all_movies">Select all</button>
+                        <button type="button" class="copy-btn" id="unselect_all_movies">Unselect all</button>
+                    </div>
+                    <div id="catalog_movies_group"></div>
+                </div>
+                <div class="form-group" style="flex:1; min-width:260px;">
+                    <label>Include Feed Catalogs (TV Series)</label>
+                    <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                        <button type="button" class="copy-btn" id="select_all_series">Select all</button>
+                        <button type="button" class="copy-btn" id="unselect_all_series">Unselect all</button>
+                    </div>
+                    <div id="catalog_series_group"></div>
+                </div>
+            </div>
             <button type="submit" class="submit-btn">Generate Manifest URL</button>
         </form>
         
@@ -643,6 +656,18 @@
                     hiddenModel.value = modelValue;
                     this.appendChild(hiddenModel);
                 }
+                const movieChecked = Array.from(document.querySelectorAll('input[name="include_catalogs_movies"]:checked')).map(cb => cb.value);
+                const seriesChecked = Array.from(document.querySelectorAll('input[name="include_catalogs_series"]:checked')).map(cb => cb.value);
+                const moviesField = document.createElement('input');
+                moviesField.type = 'hidden';
+                moviesField.name = 'include_catalogs_movies';
+                moviesField.value = movieChecked;
+                this.appendChild(moviesField);
+                const seriesField = document.createElement('input');
+                seriesField.type = 'hidden';
+                seriesField.name = 'include_catalogs_series';
+                seriesField.value = seriesChecked;
+                this.appendChild(seriesField);
             });
 
             function enhanceSearchableSelect(select) {
@@ -702,6 +727,57 @@
                     if (!alreadyFetched && !hasOptions) await fetchModels();
                 });
             }
+            const catalogPrompts = {{ CATALOG_PROMPTS|tojson|safe }};
+            function renderCatalogs() {
+                const moviesDiv = document.getElementById('catalog_movies_group');
+                const seriesDiv = document.getElementById('catalog_series_group');
+                if (!moviesDiv || !seriesDiv) return;
+                const moviesSection = moviesDiv.parentElement;
+                const seriesSection = seriesDiv.parentElement;
+                moviesDiv.innerHTML = '';
+                seriesDiv.innerHTML = '';
+                const hasSaved = {{ 'true' if existing_config else 'false' }};
+                const changedFlag = {{ ('true' if (existing_config and existing_config.changed_catalogs) else 'false') }} === 'true';
+                const defaultSelectAll = !hasSaved || !changedFlag;
+                const selectedMovies = new Set({{ ((existing_config and existing_config.include_catalogs_movies) or []) | tojson | safe }});
+                const selectedSeries = new Set({{ ((existing_config and existing_config.include_catalogs_series) or []) | tojson | safe }});
+                Object.entries(catalogPrompts).forEach(([id, cfg]) => {
+                    const mWrap = document.createElement('label');
+                    mWrap.className = 'checkbox-group';
+                    const mCb = document.createElement('input');
+                    mCb.type = 'checkbox';
+                    mCb.name = 'include_catalogs_movies';
+                    mCb.value = id;
+                    mCb.checked = defaultSelectAll ? true : selectedMovies.has(id);
+                    const mSpan = document.createElement('span');
+                    mSpan.textContent = cfg.title || id;
+                    mWrap.appendChild(mCb); mWrap.appendChild(mSpan);
+                    moviesDiv.appendChild(mWrap);
+
+                    const sWrap = document.createElement('label');
+                    sWrap.className = 'checkbox-group';
+                    const sCb = document.createElement('input');
+                    sCb.type = 'checkbox';
+                    sCb.name = 'include_catalogs_series';
+                    sCb.value = id;
+                    sCb.checked = defaultSelectAll ? true : selectedSeries.has(id);
+                    const sSpan = document.createElement('span');
+                    sSpan.textContent = cfg.title || id;
+                    sWrap.appendChild(sCb); sWrap.appendChild(sSpan);
+                    seriesDiv.appendChild(sWrap);
+                });
+                const anyMovie = Array.from(document.querySelectorAll('input[name="include_catalogs_movies"]')).some(cb => cb.checked);
+                moviesSection.style.display = anyMovie || selectedMovies.size === 0 ? 'block' : 'none';
+                const anySeries = Array.from(document.querySelectorAll('input[name="include_catalogs_series"]')).some(cb => cb.checked);
+                seriesSection.style.display = anySeries || selectedSeries.size === 0 ? 'block' : 'none';
+            }
+            document.addEventListener('DOMContentLoaded', renderCatalogs);
+            function markChanged() { const h = document.getElementById('changed_catalogs'); if (h) h.value = 'true'; }
+            document.getElementById('select_all_movies').onclick = () => { document.querySelectorAll('input[name="include_catalogs_movies"]').forEach(cb => cb.checked = true); markChanged(); };
+            document.getElementById('unselect_all_movies').onclick = () => { document.querySelectorAll('input[name="include_catalogs_movies"]').forEach(cb => cb.checked = false); markChanged(); };
+            document.getElementById('select_all_series').onclick = () => { document.querySelectorAll('input[name="include_catalogs_series"]').forEach(cb => cb.checked = true); markChanged(); };
+            document.getElementById('unselect_all_series').onclick = () => { document.querySelectorAll('input[name="include_catalogs_series"]').forEach(cb => cb.checked = false); markChanged(); };
+            document.addEventListener('change', (e) => { if (e.target && (e.target.name === 'include_catalogs_movies' || e.target.name === 'include_catalogs_series')) markChanged(); });
         </script>
 {% include '_footer.html' %}
 </body>
