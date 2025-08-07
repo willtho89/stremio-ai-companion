@@ -463,7 +463,7 @@
 
             (function initModelSelect() {
                 const sel = document.getElementById('model_name');
-                const initial = "{% if existing_config %}{{ existing_config.model_name }}{% else %}{% endif %}";
+                const initial = "{% if existing_config %}{{ existing_config.model_name }}{% else %}{{ settings.DEFAULT_MODEL }}{% endif %}";
                 if (sel && initial) {
                     resetSearchableSelect(sel);
                     sel.innerHTML = '';
