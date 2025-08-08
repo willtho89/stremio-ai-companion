@@ -565,6 +565,25 @@
                     alert(e?.message || String(e));
                 }
             });
+            
+             // Automatically fetch models when a key is pasted into the API key field
+             document.getElementById('openai_api_key').addEventListener('paste', function() {
+                 setTimeout(async () => {
+                     const baseSelect = document.getElementById('openai_base_url');
+                     const customBase = (document.getElementById('openai_base_url_custom')?.value || '').trim();
+                     if (!baseSelect) return;
+                     // Avoid triggering if custom base is selected but empty
+                     if (baseSelect.value === 'custom' && !customBase) return;
+                     try {
+                        console.log('Fetching models on paste');
+                         await fetchModels();
+                     } catch (_) {
+                         // suppress errors on paste-triggered fetch
+                     }
+                 }, 0);
+             });
+
+            
 
             document.getElementById('configForm').addEventListener('submit', function() {
                 const select = document.getElementById('openai_base_url');
