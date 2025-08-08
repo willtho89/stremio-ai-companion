@@ -171,7 +171,7 @@ async def save_config(
     try:
         # Handle checkboxes: if not present in form data, it means False
         use_posterdb_bool = use_posterdb == "on" if use_posterdb else False
-        
+
         # If UI sent an empty model name, fall back to environment default
         if not model_name or not model_name.strip():
             model_name = settings.DEFAULT_MODEL

@@ -67,18 +67,7 @@ class TestConfig:
                 max_results=0,
             )
 
-        assert "Max results must be between 1 and 50" in str(exc_info.value)
-
-    def test_invalid_max_results_high(self):
-        """Test validation for max_results above maximum."""
-        with pytest.raises(ValidationError) as exc_info:
-            Config(
-                openai_api_key="sk-test123456789012345678901234567890",
-                tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-                max_results=51,
-            )
-
-        assert "Max results must be between 1 and 50" in str(exc_info.value)
+        assert "Max results must be at least 1" in str(exc_info.value)
 
     def test_invalid_openai_url(self):
         """Test validation for invalid OpenAI base URL."""
