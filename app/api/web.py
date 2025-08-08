@@ -151,8 +151,8 @@ async def preview_page(request: Request, config: str, adult: int):
 async def save_config(
     request: Request,
     openai_api_key: str = Form(...),
-    openai_base_url: str = Form("https://openrouter.ai/api/v1"),
-    model_name: str = Form("openrouter/horizon-beta:online"),
+    openai_base_url: str = Form(settings.OPENAI_BASE_URL),
+    model_name: str = Form(settings.DEFAULT_MODEL),
     tmdb_read_access_token: str = Form(...),
     max_results: int = Form(20),
     include_adult: Optional[str] = Form(None),
@@ -171,6 +171,10 @@ async def save_config(
     try:
         # Handle checkboxes: if not present in form data, it means False
         use_posterdb_bool = use_posterdb == "on" if use_posterdb else False
+        
+        # If UI sent an empty model name, fall back to environment default
+        if not model_name or not model_name.strip():
+            model_name = settings.DEFAULT_MODEL
 
         config = Config(
             openai_api_key=openai_api_key,
