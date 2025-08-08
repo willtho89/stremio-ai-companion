@@ -559,72 +559,10 @@
             }
 
             document.getElementById('fetch_models_btn').addEventListener('click', async function() {
-                const apiKey = document.getElementById('openai_api_key').value.trim();
-                const baseSelect = document.getElementById('openai_base_url');
-                const customBase = document.getElementById('openai_base_url_custom').value.trim();
-                const baseUrl = baseSelect.value === 'custom' ? customBase : baseSelect.value;
-                if (!apiKey) return;
-                const btn = this;
-                btn.disabled = true;
-                btn.textContent = 'Fetching...';
                 try {
-                    const url = baseUrl.replace(/\/$/, '') + '/models';
-                    const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${apiKey}` } });
-                    let data = null;
-                    try { data = await resp.json(); } catch (_) {}
-                    if (!resp.ok) {
-                        const code = data && (data.code || data.error?.code || data.status || data.statusCode || resp.status);
-                        const msg = (data && (data.error?.message || data.message || data.error)) || resp.statusText || 'Failed to fetch models';
-                        throw new Error(`${code || resp.status}: ${msg}`);
-                    }
-                    const select = document.getElementById('model_name');
-                    const prevValue = (() => {
-                        if (select.getAttribute('data-enhanced') === '1') {
-                            const inp = select.previousSibling && select.previousSibling.querySelector('input');
-                            return inp ? inp.value : '';
-                        }
-                        return select.value || '';
-                    })();
-                    resetSearchableSelect(select);
-                    select.innerHTML = '';
-                    let models = [];
-                    if (Array.isArray(data)) models = data;
-                    else if (Array.isArray(data.data)) models = data.data;
-                    else if (Array.isArray(data.models)) models = data.models;
-                    const unique = Array.from(new Set(models.map(m => typeof m === 'string' ? m : (m.id || m.name)).filter(Boolean)));
-                    if (!unique.length) throw new Error('No models found');
-                    let selectedIndex = -1;
-                    const normalizedPrev = (prevValue || '').trim();
-                    unique.forEach((id, idx) => {
-                        const opt = document.createElement('option');
-                        opt.value = id;
-                        opt.textContent = id;
-                        if (normalizedPrev && id === normalizedPrev) { opt.selected = true; selectedIndex = idx; }
-                        select.appendChild(opt);
-                    });
-                    if (normalizedPrev && !unique.includes(normalizedPrev)) {
-                        const customOpt = document.createElement('option');
-                        customOpt.value = normalizedPrev;
-                        customOpt.textContent = normalizedPrev + ' (custom)';
-                        customOpt.selected = true;
-                        select.insertBefore(customOpt, select.firstChild);
-                    } else if (!normalizedPrev) {
-                        const placeholder = document.createElement('option');
-                        placeholder.value = '';
-                        placeholder.textContent = 'Select a model…';
-                        placeholder.disabled = true;
-                        placeholder.selected = true;
-                        select.insertBefore(placeholder, select.firstChild);
-                    }
-                    select.disabled = false;
-                    enhanceSearchableSelect(select);
-                    const inp = select.previousSibling && select.previousSibling.querySelector('input');
-                    if (inp) inp.value = normalizedPrev;
+                    await fetchModels();
                 } catch (e) {
-                    alert(e.message);
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = 'Fetch models';
+                    alert(e?.message || String(e));
                 }
             });
 
