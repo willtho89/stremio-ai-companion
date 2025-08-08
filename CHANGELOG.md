@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.2]
+
+
+### Fixed
+- Fixed loading default model env @0xConstant1 #8
+
+### Updated
+- Requirements
+
+### Changed
+- Configure/Preview: Add disclaimer that changing settings alters the manifest URL and requires re-adding the addon in Stremio
+- Make max results a slider to prevent average users from inputting too high numbers and running into timeouts
+
 ## [0.9.1]
 
 ### Changed
