@@ -2,8 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.9.2]
+## [0.9.3]
 
+### Cleanup
+- Configuration Page Cleanup thanks to @0xConstant1 #8
+
+### Fixed
+- Model Validation for gpt-5 models
+- load correct catalog selection on reconfigure
+
+## [0.9.2]
 
 ### Fixed
 - Fixed loading default model env @0xConstant1 #8
