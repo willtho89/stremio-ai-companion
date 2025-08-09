@@ -11,7 +11,7 @@ services:
       - ENABLE_FEED_CATALOGS=${ENABLE_FEED_CATALOGS:-true}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-openrouter/horizon-beta:online}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-openai/gpt-5-mini:online}
       - TMDB_API_KEY=${TMDB_API_KEY:-}
       - RPDB_API_KEY=${RPDB_API_KEY:-}
     depends_on:

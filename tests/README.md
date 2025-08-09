@@ -162,5 +162,5 @@ You can use these fixtures in your tests by adding them as parameters to your te
 ```python
 def test_function(sample_config):
     # Use sample_config in your test
-    assert sample_config.model_name == "openrouter/horizon-alpha:online"
+    assert sample_config.model_name == "openai/gpt-5-mini:online"
 ```

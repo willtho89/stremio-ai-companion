@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # API settings
     OPENAI_API_KEY: str | None = Field(default=None)
     OPENAI_BASE_URL: str = Field(default="https://openrouter.ai/api/v1")
-    DEFAULT_MODEL: str = Field(default="openrouter/horizon-beta:online")
+    DEFAULT_MODEL: str = Field(default="openai/gpt-5-mini:online")
 
     # TMDB settings
     TMDB_READ_ACCESS_TOKEN: str | None = Field(default=None, alias="TMDB_API_KEY")

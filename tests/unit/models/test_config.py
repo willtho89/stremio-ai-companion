@@ -16,7 +16,7 @@ class TestConfig:
         config = Config(
             openai_api_key="sk-test123456789012345678901234567890",
             openai_base_url="https://openrouter.ai/api/v1",
-            model_name="openrouter/horizon-beta:online",
+            model_name="openai/gpt-5-mini:online",
             tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
             max_results=20,
             use_posterdb=False,
@@ -25,7 +25,7 @@ class TestConfig:
 
         assert config.openai_api_key == "sk-test123456789012345678901234567890"
         assert config.openai_base_url == "https://openrouter.ai/api/v1"
-        assert config.model_name == "openrouter/horizon-beta:online"
+        assert config.model_name == "openai/gpt-5-mini:online"
         assert config.tmdb_read_access_token == "eyJhbGciOiJIUzI1NiJ9.test1234567890"
         assert config.max_results == 20
         assert config.use_posterdb is False
@@ -39,7 +39,7 @@ class TestConfig:
         )
 
         assert config.openai_base_url == "https://openrouter.ai/api/v1"
-        assert config.model_name == "openrouter/horizon-beta:online"
+        assert config.model_name == "openai/gpt-5-mini:online"
         assert config.max_results == 20
         assert config.use_posterdb is False
         # posterdb_api_key may be set from environment, so we don't assert it's None
