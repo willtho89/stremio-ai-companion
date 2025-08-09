@@ -728,9 +728,14 @@
                 seriesDiv.innerHTML = '';
                 const hasSaved = {{ 'true' if existing_config else 'false' }};
                 const changedFlag = {{ ('true' if (existing_config and existing_config.changed_catalogs) else 'false') }} === 'true';
-                const defaultSelectAll = !hasSaved || !changedFlag;
                 const selectedMovies = new Set({{ ((existing_config and existing_config.include_catalogs_movies) or []) | tojson | safe }});
                 const selectedSeries = new Set({{ ((existing_config and existing_config.include_catalogs_series) or []) | tojson | safe }});
+                // If an existing config has explicit selections, respect them regardless of changed_flag.
+                // Otherwise (no saved selections), default to select-all only when not changed.
+                // Default to select-all only when there is no existing config.
+                // If a config is loaded (hasSaved), even with zero selections, respect "none selected".
+                const defaultSelectAllMovies = !hasSaved;
+                const defaultSelectAllSeries = !hasSaved;
                 Object.entries(catalogPrompts).forEach(([id, cfg]) => {
                     const mWrap = document.createElement('label');
                     mWrap.className = 'checkbox-group';
@@ -738,7 +743,7 @@
                     mCb.type = 'checkbox';
                     mCb.name = 'include_catalogs_movies';
                     mCb.value = id;
-                    mCb.checked = defaultSelectAll ? true : selectedMovies.has(id);
+                    mCb.checked = defaultSelectAllMovies ? true : selectedMovies.has(id);
                     const mSpan = document.createElement('span');
                     mSpan.textContent = cfg.title || id;
                     mWrap.appendChild(mCb); mWrap.appendChild(mSpan);
@@ -750,16 +755,16 @@
                     sCb.type = 'checkbox';
                     sCb.name = 'include_catalogs_series';
                     sCb.value = id;
-                    sCb.checked = defaultSelectAll ? true : selectedSeries.has(id);
+                    sCb.checked = defaultSelectAllSeries ? true : selectedSeries.has(id);
                     const sSpan = document.createElement('span');
                     sSpan.textContent = cfg.title || id;
                     sWrap.appendChild(sCb); sWrap.appendChild(sSpan);
                     seriesDiv.appendChild(sWrap);
                 });
                 const anyMovie = Array.from(document.querySelectorAll('input[name="include_catalogs_movies"]')).some(cb => cb.checked);
-                moviesSection.style.display = anyMovie || selectedMovies.size === 0 ? 'block' : 'none';
+                moviesSection.style.display = anyMovie || selectedMovies.size > 0 ? 'block' : 'none';
                 const anySeries = Array.from(document.querySelectorAll('input[name="include_catalogs_series"]')).some(cb => cb.checked);
-                seriesSection.style.display = anySeries || selectedSeries.size === 0 ? 'block' : 'none';
+                seriesSection.style.display = anySeries || selectedSeries.size > 0 ? 'block' : 'none';
             }
             document.addEventListener('DOMContentLoaded', renderCatalogs);
             function markChanged() { const h = document.getElementById('changed_catalogs'); if (h) h.value = 'true'; }
