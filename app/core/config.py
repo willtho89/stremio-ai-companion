@@ -61,12 +61,14 @@ class Settings(BaseSettings):
 
 class TestSettings(Settings):
     """
-    Test-specific settings that don't load from .env file.
+    Test-specific settings that don't load from .env file and do not
+    read real environment variables (isolated from host environment).
     """
 
     FOOTER_ENABLED: bool = Field(default=True)
 
-    model_config = SettingsConfigDict(extra="ignore", env_file=None)
+    # Use a dummy env_prefix so real env vars like REDIS_HOST are ignored
+    model_config = SettingsConfigDict(extra="ignore", env_file=None, env_prefix="TEST_")
 
     # Override required field with test default
     ENCRYPTION_KEY: str = Field(default="test-encryption-key-for-testing")

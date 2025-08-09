@@ -7,7 +7,7 @@ from typing import Dict
 
 import httpx
 import openai
-from openai.types.chat import ChatCompletionSystemMessageParam, ChatCompletionUserMessageParam
+from openai.types.chat import ChatCompletionUserMessageParam
 
 from app.models.config import Config
 from app.services.tmdb import TMDBService
@@ -49,16 +49,18 @@ class ConfigValidationService:
 
             # Send a minimal test request
             messages = [
-                ChatCompletionSystemMessageParam(role="system", content="Answer 'Pong'"),
-                ChatCompletionUserMessageParam(role="user", content="Ping"),
+                ChatCompletionUserMessageParam(role="user", content="Test"),
             ]
 
             response = await client.chat.completions.create(
-                model=config.model_name, messages=messages, max_tokens=20, temperature=0
+                model=config.model_name, messages=messages, max_tokens=30, temperature=0
             )
 
-            if not response.choices or not response.choices[0].message.content:
+            if not response.choices:
                 raise ValidationError("LLM", "No response received from the model")
+
+            if response.choices[0].message.content is None:
+                raise ValidationError("LLM", "Response content is None")
 
             self.logger.debug("LLM connection test successful")
 
