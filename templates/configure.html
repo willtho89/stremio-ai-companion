@@ -133,6 +133,18 @@
             font-size: 0.9rem;
             margin-top: 0.5rem;
         }
+        .count-label {
+            background: rgba(102, 126, 234, 0.25); /* #667eea */
+            border: 1px solid rgba(102, 126, 234, 0.55);
+            color: rgba(255,255,255,0.95);
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            line-height: 1.1;
+            display: inline-flex;
+            align-items: center;
+        }
+        .button-row .copy-btn, .button-row .count-label { margin-top: 0; }
         .help-text {
             font-size: 0.8rem;
             opacity: 0.7;
@@ -212,8 +224,9 @@
             
             <div class="form-group">
                 <label for="model_name">Model</label>
-                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                <div class="button-row" style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
                     <button type="button" id="fetch_models_btn" class="copy-btn">Fetch models</button>
+                    <span id="models_loaded_label" class="count-label" style="display:none;">0 models loaded</span>
                     <label class="checkbox-group" style="margin:0; display:flex; align-items:center; gap:0.4rem;">
                         <input type="checkbox" id="use_online_suffix">
                         <span>Use online (OpenRouter only)</span>
@@ -492,10 +505,12 @@
             async function fetchModels() {
                 const spinner = document.getElementById('model_spinner');
                 const btn = document.getElementById('fetch_models_btn');
+                const countLabel = document.getElementById('models_loaded_label');
                 const apiKey = document.getElementById('openai_api_key').value.trim();
                 const baseSelect = document.getElementById('openai_base_url');
                 const customBase = document.getElementById('openai_base_url_custom').value.trim();
                 const baseUrl = baseSelect.value === 'custom' ? customBase : baseSelect.value;
+                if (countLabel) { countLabel.style.display = 'none'; countLabel.textContent = ''; }
                 if (!apiKey) return;
                 if (btn) { btn.disabled = true; btn.textContent = 'Fetching...'; }
                 if (spinner) spinner.style.display = 'block';
@@ -552,6 +567,10 @@
                     const inp = select.previousSibling && select.previousSibling.querySelector('input');
                     if (inp) inp.value = normalizedPrev;
                     select.setAttribute('data-fetched', '1');
+                    if (countLabel) {
+                        countLabel.textContent = `✓ ${unique.length} models loaded`;
+                        countLabel.style.display = 'inline-flex';
+                    }
                 } finally {
                     if (btn) { btn.disabled = false; btn.textContent = 'Fetch models'; }
                     if (spinner) spinner.style.display = 'none';
@@ -559,74 +578,29 @@
             }
 
             document.getElementById('fetch_models_btn').addEventListener('click', async function() {
-                const apiKey = document.getElementById('openai_api_key').value.trim();
-                const baseSelect = document.getElementById('openai_base_url');
-                const customBase = document.getElementById('openai_base_url_custom').value.trim();
-                const baseUrl = baseSelect.value === 'custom' ? customBase : baseSelect.value;
-                if (!apiKey) return;
-                const btn = this;
-                btn.disabled = true;
-                btn.textContent = 'Fetching...';
                 try {
-                    const url = baseUrl.replace(/\/$/, '') + '/models';
-                    const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${apiKey}` } });
-                    let data = null;
-                    try { data = await resp.json(); } catch (_) {}
-                    if (!resp.ok) {
-                        const code = data && (data.code || data.error?.code || data.status || data.statusCode || resp.status);
-                        const msg = (data && (data.error?.message || data.message || data.error)) || resp.statusText || 'Failed to fetch models';
-                        throw new Error(`${code || resp.status}: ${msg}`);
-                    }
-                    const select = document.getElementById('model_name');
-                    const prevValue = (() => {
-                        if (select.getAttribute('data-enhanced') === '1') {
-                            const inp = select.previousSibling && select.previousSibling.querySelector('input');
-                            return inp ? inp.value : '';
-                        }
-                        return select.value || '';
-                    })();
-                    resetSearchableSelect(select);
-                    select.innerHTML = '';
-                    let models = [];
-                    if (Array.isArray(data)) models = data;
-                    else if (Array.isArray(data.data)) models = data.data;
-                    else if (Array.isArray(data.models)) models = data.models;
-                    const unique = Array.from(new Set(models.map(m => typeof m === 'string' ? m : (m.id || m.name)).filter(Boolean)));
-                    if (!unique.length) throw new Error('No models found');
-                    let selectedIndex = -1;
-                    const normalizedPrev = (prevValue || '').trim();
-                    unique.forEach((id, idx) => {
-                        const opt = document.createElement('option');
-                        opt.value = id;
-                        opt.textContent = id;
-                        if (normalizedPrev && id === normalizedPrev) { opt.selected = true; selectedIndex = idx; }
-                        select.appendChild(opt);
-                    });
-                    if (normalizedPrev && !unique.includes(normalizedPrev)) {
-                        const customOpt = document.createElement('option');
-                        customOpt.value = normalizedPrev;
-                        customOpt.textContent = normalizedPrev + ' (custom)';
-                        customOpt.selected = true;
-                        select.insertBefore(customOpt, select.firstChild);
-                    } else if (!normalizedPrev) {
-                        const placeholder = document.createElement('option');
-                        placeholder.value = '';
-                        placeholder.textContent = 'Select a model…';
-                        placeholder.disabled = true;
-                        placeholder.selected = true;
-                        select.insertBefore(placeholder, select.firstChild);
-                    }
-                    select.disabled = false;
-                    enhanceSearchableSelect(select);
-                    const inp = select.previousSibling && select.previousSibling.querySelector('input');
-                    if (inp) inp.value = normalizedPrev;
+                    await fetchModels();
                 } catch (e) {
-                    alert(e.message);
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = 'Fetch models';
+                    alert(e?.message || String(e));
                 }
             });
+ 
+             // Automatically fetch models when a key is pasted into the API key field
+             document.getElementById('openai_api_key').addEventListener('paste', function() {
+                 setTimeout(async () => {
+                     const baseSelect = document.getElementById('openai_base_url');
+                     const customBase = (document.getElementById('openai_base_url_custom')?.value || '').trim();
+                     if (!baseSelect) return;
+                     // Avoid triggering if custom base is selected but empty
+                     if (baseSelect.value === 'custom' && !customBase) return;
+                     try {
+                          console.log('Fetching models on paste');
+                          await fetchModels();
+                     } catch (_) {
+                         // suppress errors on paste-triggered fetch
+                     }
+                 }, 0);
+             });
 
             document.getElementById('configForm').addEventListener('submit', function() {
                 const select = document.getElementById('openai_base_url');
@@ -695,7 +669,8 @@
                 list.style.top = 'calc(100% + 4px)';
                 list.style.maxHeight = '220px';
                 list.style.overflowY = 'auto';
-                list.style.background = 'rgba(0,0,0,0.6)';
+                list.style.background = 'rgba(0,0,0,0.60)';
+                list.style.backdropFilter = 'blur(15px)';
                 list.style.border = '1px solid rgba(255,255,255,0.25)';
                 list.style.borderRadius = '10px';
                 list.style.display = 'none';
