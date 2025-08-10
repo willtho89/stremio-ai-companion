@@ -9,6 +9,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.models.enums import Languages
 
+
 class Settings(BaseSettings):
     """
     Application settings loaded from environment variables.
@@ -44,7 +45,9 @@ class Settings(BaseSettings):
     RPDB_API_KEY: str | None = Field(default=None)
 
     # Catalog settings
-    PREFERRED_USER_SEARCH_LANGUAGE: str | None =  Field(default=Languages.EN.code, description="Preferred language for user search results")
+    PREFERRED_USER_SEARCH_LANGUAGE: str | None = Field(
+        default=Languages.EN.code, description="Preferred language for user search results"
+    )
     MAX_CATALOG_RESULTS: int = Field(default=10, description="Maximum number of results to return in cached catalog")
     MAX_CATALOG_ENTRIES: int = Field(default=100, description="Maximum total entries to store per catalog")
 
