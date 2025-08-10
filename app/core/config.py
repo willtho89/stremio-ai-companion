@@ -7,7 +7,7 @@ from functools import lru_cache
 from app import __version__
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+from app.models.enums import Languages
 
 class Settings(BaseSettings):
     """
@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     RPDB_API_KEY: str | None = Field(default=None)
 
     # Catalog settings
+    PREFERRED_USER_SEARCH_LANGUAGE: str | None =  Field(default=Languages.EN.code, description="Preferred language for user search results")
     MAX_CATALOG_RESULTS: int = Field(default=10, description="Maximum number of results to return in cached catalog")
     MAX_CATALOG_ENTRIES: int = Field(default=100, description="Maximum total entries to store per catalog")
 

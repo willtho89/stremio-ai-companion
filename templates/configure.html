@@ -238,6 +238,19 @@
                 <div id="model_spinner" class="help-text" style="display:none;">Loading models…</div>
                 <div class="help-text">Searchable dropdown enabled after fetching models. You can still type a custom value.</div>
             </div>
+
+            <div class="form-group">
+                <label for="language">Preferred Search Language</label>
+                <div class="position-relative">
+                    <select id="language" name="language" required>
+                        {% set current_language = existing_config.language if existing_config else settings.PREFERRED_USER_SEARCH_LANGUAGE %}
+                        {% for lang in Languages %}
+                            <option value="{{ lang.code }}" {% if lang.code == current_language %}selected{% endif %}>{{ lang.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="help-text">Select your preferred language for search queries. This impacts the language for metadata extraction.</div>
+            </div>
             
             <div class="form-group">
                 <label for="tmdb_read_access_token">TMDB Read Access Token *</label>

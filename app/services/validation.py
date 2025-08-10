@@ -92,7 +92,7 @@ class ConfigValidationService:
             ValidationError: If TMDB connection fails
         """
         try:
-            tmdb_service = TMDBService(config.tmdb_read_access_token, timeout=self._timeout)
+            tmdb_service = TMDBService(config.tmdb_read_access_token, language=config.language, timeout=self._timeout)
 
             # Test with a simple configuration endpoint
             async with httpx.AsyncClient(timeout=self._timeout) as client:

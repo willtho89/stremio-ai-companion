@@ -13,7 +13,7 @@ from starlette.templating import Jinja2Templates
 from app.core.config import settings
 from app.core.logging import logger
 from app.models.config import Config
-from app.models.enums import LLMProvider
+from app.models.enums import LLMProvider, Languages
 from app.services import CATALOG_PROMPTS
 from app.services.encryption import encryption_service
 from app.services.validation import ConfigValidationService
@@ -103,6 +103,7 @@ async def configure_page(request: Request, config: Optional[str] = Query(None), 
             "adult_flag": adult_flag,
             "settings": settings,
             "LLMProvider": LLMProvider,
+            "Languages": Languages,
             "CATALOG_PROMPTS": _catalog_prompts_serializable(),
         },
     )
@@ -153,6 +154,7 @@ async def save_config(
     openai_api_key: str = Form(...),
     openai_base_url: str = Form(settings.OPENAI_BASE_URL),
     model_name: str = Form(settings.DEFAULT_MODEL),
+    language: str = Form(settings.PREFERRED_USER_SEARCH_LANGUAGE),
     tmdb_read_access_token: str = Form(...),
     max_results: int = Form(20),
     include_adult: Optional[str] = Form(None),
@@ -169,6 +171,7 @@ async def save_config(
     and returns URLs for the manifest and preview page.
     """
     try:
+        print(f"language: {language}")
         # Handle checkboxes: if not present in form data, it means False
         use_posterdb_bool = use_posterdb == "on" if use_posterdb else False
 
@@ -180,6 +183,7 @@ async def save_config(
             openai_api_key=openai_api_key,
             openai_base_url=openai_base_url,
             model_name=model_name,
+            language=language,
             tmdb_read_access_token=tmdb_read_access_token,
             max_results=max_results,
             use_posterdb=use_posterdb_bool,

@@ -1,7 +1,7 @@
-# Stremio AI Companion 
+# Stremio AI Companion
 
-[![CI](https://github.com/willtho89/stremio-ai-companion/actions/workflows/ci.yml/badge.svg)](https://github.com/willtho89/stremio-ai-companion/actions/workflows/ci.yml) [![CD](https://github.com/willtho89/stremio-ai-companion/actions/workflows/cd.yml/badge.svg)](https://github.com/willtho89/stremio-ai-companion/actions/workflows/cd.yml) [![Security](https://github.com/willtho89/stremio-ai-companion/actions/workflows/security.yml/badge.svg)](https://github.com/willtho89/stremio-ai-companion/actions/workflows/security.yml)
----
+## [![CI](https://github.com/willtho89/stremio-ai-companion/actions/workflows/ci.yml/badge.svg)](https://github.com/willtho89/stremio-ai-companion/actions/workflows/ci.yml) [![CD](https://github.com/willtho89/stremio-ai-companion/actions/workflows/cd.yml/badge.svg)](https://github.com/willtho89/stremio-ai-companion/actions/workflows/cd.yml) [![Security](https://github.com/willtho89/stremio-ai-companion/actions/workflows/security.yml/badge.svg)](https://github.com/willtho89/stremio-ai-companion/actions/workflows/security.yml)
+
 🎬 Your AI-powered movie and tv series discovery companion for Stremio — powered by advanced natural language understanding using OpenAI-compatible APIs. Discover perfect films using intelligent recommendations and AI-curated collections.
 
 ![Demo Screenshot](.assets/stremio-ai-companion.gif)
@@ -84,6 +84,7 @@ docker run -d \
 ```
 
 Optional environment overrides (add -e for any you need):
+
 - OPENAI_API_KEY, OPENAI_BASE_URL, DEFAULT_MODEL
 - TMDB_API_KEY, RPDB_API_KEY
 - ENABLE_FEED_CATALOGS, SPLIT_MANIFESTS, MAX_CATALOG_RESULTS, MAX_CATALOG_ENTRIES, CACHE_SEARCH_QUERY_TTL
@@ -138,29 +139,31 @@ Note: The compose file also supports UVICORN_WORKERS for multi-worker deployment
 
 These are loaded via Pydantic BaseSettings. Defaults shown are the in-code defaults unless stated otherwise.
 
-| Variable               | Description                                         | Default                          |
-|------------------------|-----------------------------------------------------|----------------------------------|
-| ENCRYPTION_KEY         | Encryption key for secure, stateless configs (req.)| —                                |
-| OPENAI_API_KEY         | OpenAI/OpenRouter-compatible API key                | —                                |
-| OPENAI_BASE_URL        | AI gateway base URL                                | https://openrouter.ai/api/v1     |
-| DEFAULT_MODEL          | Default model identifier                            | openai/gpt-5-mini:online   |
-| TMDB_API_KEY           | TMDB v4 Read Access Token                           | —                                |
-| RPDB_API_KEY           | RatingPosterDB API key (optional)                   | —                                |
-| MAX_CATALOG_RESULTS    | Max results returned per generation                 | 10                               |
-| MAX_CATALOG_ENTRIES    | Max total cached entries per catalog (Redis)        | 100                              |
-| CACHE_SEARCH_QUERY_TTL | Cache TTL (seconds) for explicit search results     | 14400                            |
-| SPLIT_MANIFESTS        | Enable separate movie/series manifests              | false                            |
-| ENABLE_FEED_CATALOGS   | Expose predefined AI-curated catalogs in manifest   | true                             |
-| FOOTER_ENABLED         | Show footer on web pages                            | true                             |
-| LOG_LEVEL              | Logging level                                       | INFO                             |
-| HOST                   | Bind host                                           | 0.0.0.0                          |
-| PORT                   | Bind port                                           | 8000                             |
-| STREMIO_ADDON_ID       | Base addon identifier in manifest                   | ai.companion.stremio             |
-| REDIS_HOST             | Redis host (enables shared cache if set)            | —                                |
-| REDIS_PORT             | Redis port                                          | 6379                             |
-| REDIS_DB               | Redis database index                                | 0                                |
+| Variable                       | Description                                         | Default                      |
+| ------------------------------ | --------------------------------------------------- | ---------------------------- |
+| ENCRYPTION_KEY                 | Encryption key for secure, stateless configs (req.) | —                            |
+| OPENAI_API_KEY                 | OpenAI/OpenRouter-compatible API key                | —                            |
+| OPENAI_BASE_URL                | AI gateway base URL                                 | https://openrouter.ai/api/v1 |
+| DEFAULT_MODEL                  | Default model identifier                            | openai/gpt-5-mini:online     |
+| PREFERRED_SEARCH_USER_LANGUAGE | Preferred language for user search queries          | en-US                        |
+| TMDB_API_KEY                   | TMDB v4 Read Access Token                           | —                            |
+| RPDB_API_KEY                   | RatingPosterDB API key (optional)                   | —                            |
+| MAX_CATALOG_RESULTS            | Max results returned per generation                 | 10                           |
+| MAX_CATALOG_ENTRIES            | Max total cached entries per catalog (Redis)        | 100                          |
+| CACHE_SEARCH_QUERY_TTL         | Cache TTL (seconds) for explicit search results     | 14400                        |
+| SPLIT_MANIFESTS                | Enable separate movie/series manifests              | false                        |
+| ENABLE_FEED_CATALOGS           | Expose predefined AI-curated catalogs in manifest   | true                         |
+| FOOTER_ENABLED                 | Show footer on web pages                            | true                         |
+| LOG_LEVEL                      | Logging level                                       | INFO                         |
+| HOST                           | Bind host                                           | 0.0.0.0                      |
+| PORT                           | Bind port                                           | 8000                         |
+| STREMIO_ADDON_ID               | Base addon identifier in manifest                   | ai.companion.stremio         |
+| REDIS_HOST                     | Redis host (enables shared cache if set)            | —                            |
+| REDIS_PORT                     | Redis port                                          | 6379                         |
+| REDIS_DB                       | Redis database index                                | 0                            |
 
 Deployment-centric variable (container only):
+
 - UVICORN_WORKERS: number of Uvicorn workers; 0 or unset = auto based on CPU (entrypoint.sh)
 
 ---
@@ -193,6 +196,7 @@ Use the preview page to copy exact URLs tailored to your config.
 ## 🛠️ Web UI & API Endpoints
 
 Web UI:
+
 - GET `/` — Home
 - GET `/configure` — New configuration form
 - GET `/configure?config=...` — Edit existing configuration
@@ -202,6 +206,7 @@ Web UI:
 - GET `/config/{config}/adult/{adult}/{content_type}/configure` — Redirect to `/configure?config=...`
 
 Stremio API:
+
 - GET `/config/{config}/adult/{adult}/manifest.json` — Combined manifest
 - GET `/config/{config}/adult/{adult}/movie/manifest.json` — Movie manifest
 - GET `/config/{config}/adult/{adult}/series/manifest.json` — Series manifest
@@ -223,6 +228,7 @@ Stremio API:
 ## 🎭 Split Manifest Support
 
 Available via configuration. Choose a single addon or split into:
+
 - Movies-only addon
 - Series-only addon
 - Combined addon
