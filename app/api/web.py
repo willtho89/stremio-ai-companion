@@ -171,7 +171,6 @@ async def save_config(
     and returns URLs for the manifest and preview page.
     """
     try:
-        print(f"language: {language}")
         # Handle checkboxes: if not present in form data, it means False
         use_posterdb_bool = use_posterdb == "on" if use_posterdb else False
 

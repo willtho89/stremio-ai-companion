@@ -88,9 +88,9 @@ class Config(BaseModel):
     @field_validator("language")
     @classmethod
     def validate_language(cls, v):
-        LANG_CODE_REGEX = r"^[a-z]{2}-[A-Z]{2}$"
+        LANG_CODE_REGEX = r"^[a-z]{2}(-[A-Z]{2})?$"
         if not v or not fullmatch(LANG_CODE_REGEX, v.strip()):
-            raise ValueError("Language must be provided and valid ISO code like 'en-US'")
+            raise ValueError("Language must be provided and valid ISO code like 'en or en-US'")
 
         if v.strip() not in {lang.code for lang in Languages}:
             raise ValueError(f"Language '{v}' is not supported")
