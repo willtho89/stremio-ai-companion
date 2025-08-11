@@ -2,11 +2,13 @@
 Configuration models for the Stremio AI Companion application.
 """
 
+from re import fullmatch
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.core.config import settings
+from app.models.enums import Languages
 
 
 class Config(BaseModel):
@@ -29,9 +31,12 @@ class Config(BaseModel):
     include_catalogs_movies: Optional[list[str]] = None
     include_catalogs_series: Optional[list[str]] = None
     changed_catalogs: bool = False
+    language: str = Languages.EN.code
 
     def __init__(self, **data):
         # Use .env values as defaults if not provided (but not if explicitly set to empty)
+        if "language" not in data and settings.PREFERRED_USER_SEARCH_LANGUAGE:
+            data["language"] = settings.PREFERRED_USER_SEARCH_LANGUAGE
         if "openai_api_key" not in data and settings.OPENAI_API_KEY:
             data["openai_api_key"] = settings.OPENAI_API_KEY
         if "openai_base_url" not in data and settings.OPENAI_BASE_URL:
@@ -79,3 +84,15 @@ class Config(BaseModel):
         if info.data.get("use_posterdb") and (not v or len(v.strip()) < 5):
             raise ValueError("RPDB API key is required when RPDB is enabled")
         return v.strip() if v else None
+
+    @field_validator("language")
+    @classmethod
+    def validate_language(cls, v):
+        LANG_CODE_REGEX = r"^[a-z]{2}(-[A-Z]{2})?$"
+        if not v or not fullmatch(LANG_CODE_REGEX, v.strip()):
+            raise ValueError("Language must be provided and valid ISO code like 'en or en-US'")
+
+        if v.strip() not in {lang.code for lang in Languages}:
+            raise ValueError(f"Language '{v}' is not supported")
+
+        return v.strip()

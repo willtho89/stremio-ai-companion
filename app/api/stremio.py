@@ -328,7 +328,7 @@ async def _process_catalog_request_internal(
                     return cached_entries
 
         llm_service = LLMService(config_obj)
-        tmdb_service = TMDBService(config_obj.tmdb_read_access_token)
+        tmdb_service = TMDBService(config_obj.tmdb_read_access_token, language=config_obj.language)
         rpdb_service = RPDBService(config_obj.posterdb_api_key) if config_obj.use_posterdb else None
 
         user_intent = detect_user_intent(search)

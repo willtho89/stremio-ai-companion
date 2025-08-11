@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from app.services.tmdb import TMDBService
+from app.models.enums import Languages
 
 
 class TestTMDBService:
@@ -16,14 +17,15 @@ class TestTMDBService:
     @pytest.fixture
     def tmdb_service(self):
         """Fixture providing a TMDBService instance."""
-        return TMDBService("test-token")
+        return TMDBService("test-token", Languages.EN.code)
 
     def test_init(self):
         """Test initialization of TMDBService."""
-        service = TMDBService("test-token")
+        service = TMDBService("test-token", Languages.EN.code)
 
         assert service.read_access_token == "test-token"
         assert service.base_url == "https://api.themoviedb.org/3"
+        assert service.language == "en-US"
 
     @patch("httpx.AsyncClient.get")
     async def test_search_movie_success(self, mock_get, tmdb_service):

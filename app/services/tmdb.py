@@ -16,7 +16,7 @@ class TMDBSearchParams(BaseModel):
 
     query: str
     include_adult: bool = False
-    language: str = "en-US"
+    language: str
     page: int = 1
     year: Optional[int] = None
 
@@ -60,7 +60,7 @@ class TMDBDetailsParams(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    language: str = "en-US"
+    language: str
     append_to_response: str = "external_ids"
 
     @property
@@ -80,18 +80,20 @@ class TMDBService:
     from the TMDB API.
     """
 
-    def __init__(self, read_access_token: str, timeout: float = 10.0) -> None:
+    def __init__(self, read_access_token: str, language: str, timeout: float = 10.0) -> None:
         """
         Initialize the TMDB service with an access token.
 
         Args:
             read_access_token: TMDB API read access token
+            language: Language code for API requests
             timeout: HTTP request timeout in seconds
         """
         self.read_access_token = read_access_token
         self.base_url = "https://api.themoviedb.org/3"
         self.timeout = timeout
         self.logger = logging.getLogger("stremio_ai_companion.TMDBService")
+        self.language = language
 
     @property
     def _headers(self) -> dict[str, str]:
@@ -151,7 +153,7 @@ class TMDBService:
         """
         self.logger.debug(f"Searching TMDB for movie: '{title}'" + (f" ({year})" if year else ""))
 
-        search_params = TMDBMovieSearchParams(query=title, year=year, include_adult=False)
+        search_params = TMDBMovieSearchParams(query=title, year=year, include_adult=False, language=self.language)
 
         data = await self._make_request("search/movie", search_params.api_params)
 
@@ -182,7 +184,7 @@ class TMDBService:
         """
         self.logger.debug(f"Searching TMDB for TV series: '{title}'" + (f" ({year})" if year else ""))
 
-        search_params = TMDBTVSearchParams(query=title, year=year, include_adult=False)
+        search_params = TMDBTVSearchParams(query=title, year=year, include_adult=False, language=self.language)
 
         data = await self._make_request("search/tv", search_params.api_params)
 
@@ -209,7 +211,7 @@ class TMDBService:
         """
         self.logger.debug(f"Fetching TMDB details for movie ID: {movie_id}")
 
-        details_params = TMDBDetailsParams()
+        details_params = TMDBDetailsParams(language=self.language)
         data = await self._make_request(f"movie/{movie_id}", details_params.api_params)
 
         if data:
@@ -229,7 +231,7 @@ class TMDBService:
         """
         self.logger.debug(f"Fetching TMDB details for TV series ID: {tv_id}")
 
-        details_params = TMDBDetailsParams()
+        details_params = TMDBDetailsParams(language=self.language)
         data = await self._make_request(f"tv/{tv_id}", details_params.api_params)
 
         if data:
