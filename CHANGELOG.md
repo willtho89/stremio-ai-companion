@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0]
+
+### Added
+- Language selector for TMDB Data; Thanks to @EnriqueSantos-dev #11
+- Caching dependent on Language
+
+### Refactor
+- Config decryption through Depends -> allow access of configured fields earlier in request cycle
+
 ## [0.9.3]
 
 ### Cleanup

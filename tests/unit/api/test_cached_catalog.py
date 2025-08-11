@@ -43,22 +43,11 @@ def mock_encryption_service():
         yield mock
 
 
-@pytest.fixture
-def mock_apply_rpdb_posters():
-    """Fixture providing a mocked _apply_rpdb_posters function."""
-    with patch("app.api.stremio._apply_rpdb_posters") as mock_fn:
-        # Return the input metas unchanged
-        mock_fn.side_effect = lambda metas, rpdb_service: metas
-        yield mock_fn
-
-
 class TestCachedCatalog:
     """Tests for the _cached_catalog function."""
 
     @pytest.mark.asyncio
-    async def test_lru_cache_skip_zero(
-        self, mock_cache, mock_process_catalog_request, mock_encryption_service, mock_apply_rpdb_posters
-    ):
+    async def test_lru_cache_skip_zero(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
         """Test LRU cache behavior with skip=0."""
         # Set up cache miss
         mock_cache.aget.return_value = None
@@ -84,9 +73,7 @@ class TestCachedCatalog:
         assert mock_cache.aset.call_args[0][1] == result
 
     @pytest.mark.asyncio
-    async def test_lru_cache_hit(
-        self, mock_cache, mock_process_catalog_request, mock_encryption_service, mock_apply_rpdb_posters
-    ):
+    async def test_lru_cache_hit(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
         """Test LRU cache hit."""
         # Set up cache hit
         cached_data = {"metas": [{"name": "Cached Movie", "id": "cached-id"}]}
@@ -107,9 +94,7 @@ class TestCachedCatalog:
         mock_cache.aset.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_redis_cache_skip_zero(
-        self, mock_cache, mock_process_catalog_request, mock_encryption_service, mock_apply_rpdb_posters
-    ):
+    async def test_redis_cache_skip_zero(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
         """Test Redis cache behavior with skip=0."""
         # Set up Redis cache
         mock_cache.is_redis = True
@@ -132,7 +117,7 @@ class TestCachedCatalog:
 
     @pytest.mark.asyncio
     async def test_redis_cache_with_existing_entries(
-        self, mock_cache, mock_process_catalog_request, mock_encryption_service, mock_apply_rpdb_posters
+        self, mock_cache, mock_process_catalog_request, mock_encryption_service
     ):
         """Test Redis cache with existing entries."""
         # Set up Redis cache with existing entries
@@ -165,9 +150,7 @@ class TestCachedCatalog:
         }
 
     @pytest.mark.asyncio
-    async def test_redis_cache_pagination(
-        self, mock_cache, mock_process_catalog_request, mock_encryption_service, mock_apply_rpdb_posters
-    ):
+    async def test_redis_cache_pagination(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
         """Test Redis cache pagination."""
         # Set up Redis cache
         mock_cache.is_redis = True
@@ -199,9 +182,7 @@ class TestCachedCatalog:
         assert result == {"metas": expected_metas}
 
     @pytest.mark.asyncio
-    async def test_redis_cache_max_entries(
-        self, mock_cache, mock_process_catalog_request, mock_encryption_service, mock_apply_rpdb_posters
-    ):
+    async def test_redis_cache_max_entries(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
         """Test Redis cache with maximum entries reached."""
         # Set up Redis cache
         mock_cache.is_redis = True
@@ -224,9 +205,7 @@ class TestCachedCatalog:
             assert result == {"metas": existing_entries["metas"]}
 
     @pytest.mark.asyncio
-    async def test_catalog_id_fallback(
-        self, mock_cache, mock_process_catalog_request, mock_encryption_service, mock_apply_rpdb_posters
-    ):
+    async def test_catalog_id_fallback(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
         """Test fallback to trending when catalog_id is invalid."""
         # Set up cache miss
         mock_cache.aget.return_value = None
@@ -242,9 +221,7 @@ class TestCachedCatalog:
         assert "trending" in prompt_arg.lower()
 
     @pytest.mark.asyncio
-    async def test_duplicate_filtering(
-        self, mock_cache, mock_process_catalog_request, mock_encryption_service, mock_apply_rpdb_posters
-    ):
+    async def test_duplicate_filtering(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
         """Test filtering of duplicate entries in Redis cache."""
         # Set up Redis cache
         mock_cache.is_redis = True

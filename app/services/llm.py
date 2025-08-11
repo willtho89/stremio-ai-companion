@@ -18,6 +18,10 @@ from app.models.movie import MovieSuggestions, TVSeriesSuggestions, MovieSuggest
 MESSAGE_TYPE = Iterable[ChatCompletionSystemMessageParam | ChatCompletionUserMessageParam,]
 
 
+class StructuredOutputNotSupported(Exception):
+    pass
+
+
 class LLMService:
     """
     Service for generating movie suggestions using OpenAI's LLM.
@@ -31,6 +35,11 @@ class LLMService:
         self._default_timeout = 30
         self._default_temperature = 0.7
         self._default_max_tokens = 5000
+
+    def _structured_output_supported(self):
+        if self.base_url.endswith("/v1beta/openai/"):
+            raise StructuredOutputNotSupported
+        return True
 
     @property
     def _current_date(self) -> str:
@@ -206,6 +215,7 @@ If this is about current streaming content, use web search for accurate informat
             temperature=self._default_temperature,
             max_tokens=self._default_max_tokens,
             timeout=self._default_timeout,
+            reasoning_effort="minimal",
         )
 
         parsed_object = response.choices[0].message.parsed
@@ -240,6 +250,7 @@ If this is about current streaming content, use web search for accurate informat
             temperature=self._default_temperature,
             max_tokens=self._default_max_tokens,
             timeout=self._default_timeout,
+            reasoning_effort="low",
         )
 
         content = response.choices[0].message.content
@@ -262,38 +273,30 @@ If this is about current streaming content, use web search for accurate informat
 
         Returns a list of Pydantic model objects (MovieSuggestion or TVSeriesSuggestion).
         """
-        self.logger.debug(f"Generating {max_results} {content_type.value} suggestions for query: '{query}'")
+        self.logger.debug(
+            f"[{self.model}]Generating {max_results} {content_type.value} suggestions for query: '{query}'"
+        )
 
         messages = self._build_messages(query, max_results, content_type)
         response_model, field_name = self._get_response_config(content_type)
 
-        if self.base_url.endswith("/v1beta/openai/"):
-            try:
-                suggestions = await self._try_fallback_completion(messages, response_model, field_name, max_results)
-                return suggestions
-            except Exception as fallback_e:
-                self.logger.error(f"Fallback completion failed with Gemini base URL: {fallback_e}")
-                if content_type == ContentType.MOVIE:
-                    return [MovieSuggestion(title=query, year=2024)]
-                else:
-                    return [TVSeriesSuggestion(title=query, year=2024)]
-
         try:
-            suggestions = await self._try_structured_completion(messages, response_model, field_name, max_results)
-            return suggestions
-        except (openai.BadRequestError, AttributeError) as e:
-            self.logger.warning(f"Structured Output (.parse) failed: {e}. Attempting fallback.")
+            if self._structured_output_supported():
+                suggestions = await self._try_structured_completion(messages, response_model, field_name, max_results)
+                return suggestions
+        except (openai.BadRequestError, AttributeError, StructuredOutputNotSupported) as e:
+            self.logger.warning(f"[{self.model}]Structured Output (.parse) failed: {e}. Attempting fallback.")
             try:
                 suggestions = await self._try_fallback_completion(messages, response_model, field_name, max_results)
                 return suggestions
             except Exception as fallback_e:
-                self.logger.error(f"Fallback completion also failed: {fallback_e}")
+                self.logger.error(f"[{self.model}]Fallback completion also failed: {fallback_e}")
                 if content_type == ContentType.MOVIE:
                     return [MovieSuggestion(title=query, year=2024)]
                 else:
                     return [TVSeriesSuggestion(title=query, year=2024)]
         except Exception as e:
-            self.logger.error(f"An unexpected LLM service error occurred: {e}")
+            self.logger.error(f"[{self.model}]An unexpected LLM service error occurred: {e}")
             if content_type == ContentType.MOVIE:
                 return [MovieSuggestion(title=query, year=2024)]
             else:
@@ -326,19 +329,21 @@ If this is about current streaming content, use web search for accurate informat
     async def generate_movie_suggestions(self, query: str, max_results: int) -> List[MovieSuggestion]:
         """Generate movie suggestions and return as Pydantic models."""
         start_time = datetime.now()
-        self.logger.info(f"Generating {max_results} movie suggestions for query: '{query}'")
+        self.logger.info(f"[{self.model}]Generating {max_results} movie suggestions for query: '{query}'")
         suggestions = await self._generate_suggestions(query, max_results, content_type=ContentType.MOVIE)
         filtered_suggestions = self._filter_duplicates(suggestions)
-        self.logger.info(f"Generated {len(filtered_suggestions)} movie suggestions. [{datetime.now() - start_time}]")
+        self.logger.info(
+            f"[{self.model}]Generated {len(filtered_suggestions)} movie suggestions. [{datetime.now() - start_time}]"
+        )
         return cast(List[MovieSuggestion], filtered_suggestions)
 
     async def generate_tv_suggestions(self, query: str, max_results: int) -> List[TVSeriesSuggestion]:
         """Generate TV series suggestions and return as Pydantic models."""
         start_time = datetime.now()
-        self.logger.info(f"Generating {max_results} TV series suggestions for query: '{query}'")
+        self.logger.info(f"[{self.model}]Generating {max_results} TV series suggestions for query: '{query}'")
         suggestions = await self._generate_suggestions(query, max_results, content_type=ContentType.SERIES)
         filtered_suggestions = self._filter_duplicates(suggestions)
         self.logger.info(
-            f"Generated {len(filtered_suggestions)} TV series suggestions. [{datetime.now() - start_time}]"
+            f"[{self.model}]Generated {len(filtered_suggestions)} TV series suggestions. [{datetime.now() - start_time}]"
         )
         return cast(List[TVSeriesSuggestion], filtered_suggestions)

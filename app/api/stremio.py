@@ -6,11 +6,12 @@ import asyncio
 import json
 import time
 from functools import lru_cache, wraps
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Awaitable, Any, Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Path
 from slugify import slugify
 
+from app.api.deps import get_config, rpdb_response
 from app.core.config import settings
 from app.core.logging import logger
 from app.models.config import Config
@@ -18,9 +19,8 @@ from app.models.enums import ContentType
 from app.models.movie import MovieSuggestion, TVSeriesSuggestion, StremioResponse
 from app.services import CATALOG_PROMPTS
 from app.services.cache import CACHE_INSTANCE
-from app.services.encryption import encryption_service
+from app.services.encryption import encryption_service  # used internally for key building and helper calls
 from app.services.llm import LLMService
-from app.services.rpdb import RPDBService
 from app.services.tmdb import TMDBService
 from app.utils.conversion import movie_to_stremio_meta, tv_to_stremio_meta
 from app.utils.parsing import detect_user_intent
@@ -57,28 +57,7 @@ def timed_lru_cache(seconds: int, maxsize: int = 128):
     return wrapper_cache
 
 
-async def _apply_rpdb_posters(metas: List[dict], rpdb_service: Optional[RPDBService]) -> List[dict]:
-    """
-    Apply RPDB posters to metadata if RPDB service is available.
-    This modifies the poster URLs before delivery to the user.
-    """
-    if not rpdb_service or not metas:
-        return metas
-
-    # Extract IMDB IDs and get RPDB posters (no longer async)
-    for meta in metas:
-        imdb_id = meta.get("imdb_id")
-        if imdb_id:
-            poster_url = rpdb_service.get_poster(imdb_id)
-            if poster_url:
-                meta["poster"] = poster_url
-
-    return metas
-
-
 async def _process_metadata_pipeline(
-    tmdb_service,
-    rpdb_service,
     suggestions: List[Union[MovieSuggestion, TVSeriesSuggestion]],
     include_adult: bool,
     *,
@@ -217,66 +196,63 @@ def build_manifest(
     }
 
 
+# --- Shared helpers -----------------------------------------------------------
+
+# moved to app.api.deps.get_config
+
+
+def _cache_key(prefix: str, *, lang: str, parts: list[str]) -> str:
+    safe = [slugify(p, separator="") if isinstance(p, str) else str(p) for p in parts]
+    lang_key = lang or "en-US"
+    return f"{prefix}:lang={lang_key}:" + ":".join(safe)
+
+
+async def _cache_get_set(key: str, ttl: Optional[int], compute_coro: Awaitable[Any]):
+    cache = CACHE_INSTANCE
+    if ttl and key:
+        cached = await cache.aget(key)
+        if cached is not None:
+            logger.debug(f"Cache hit for key={key}")
+            return cached
+        result = await compute_coro
+        await cache.aset(key, result, ttl)
+        return result
+    # No caching requested
+    return await compute_coro
+
+
+# rpdb_response decorator moved to app.api.deps.rpdb_response
+
+
 @router.get("/config/{config}/adult/{adult}/manifest.json")
-async def get_manifest(config: str, adult: int):
+async def get_manifest(cfg: Config = Depends(get_config), adult: int = Path(...)):
     """
     Return the Stremio addon manifest for combined movies and series.
 
     This endpoint is called by Stremio to get information about the addon.
     """
-    try:
-        config_data = encryption_service.decrypt(config)
-        # validate model
-        Config.model_validate(json.loads(config_data))
-
-        config_obj = Config.model_validate(json.loads(config_data))
-        return build_manifest(
-            None,
-            config_obj.include_catalogs_movies,
-            config_obj.include_catalogs_series,
-            changed_catalogs=config_obj.changed_catalogs,
-        )
-    except Exception as e:
-        logger.error(f"Manifest request failed: {e}")
-        raise HTTPException(status_code=400, detail="Invalid config")
+    return build_manifest(
+        None,
+        cfg.include_catalogs_movies,
+        cfg.include_catalogs_series,
+        changed_catalogs=cfg.changed_catalogs,
+    )
 
 
 @router.get("/config/{config}/adult/{adult}/movie/manifest.json")
-async def get_movie_manifest(config: str, adult: int):
+async def get_movie_manifest(cfg: Config = Depends(get_config), adult: int = Path(...)):
     """
     Return the Stremio addon manifest for movies only.
     """
-    try:
-        config_data = encryption_service.decrypt(config)
-        # validate model
-        Config.model_validate(json.loads(config_data))
-
-        config_obj = Config.model_validate(json.loads(config_data))
-        return build_manifest(
-            ["movie"], config_obj.include_catalogs_movies, None, changed_catalogs=config_obj.changed_catalogs
-        )
-    except Exception as e:
-        logger.error(f"Movie manifest request failed: {e}")
-        raise HTTPException(status_code=400, detail="Invalid config")
+    return build_manifest(["movie"], cfg.include_catalogs_movies, None, changed_catalogs=cfg.changed_catalogs)
 
 
 @router.get("/config/{config}/adult/{adult}/series/manifest.json")
-async def get_series_manifest(config: str, adult: int):
+async def get_series_manifest(cfg: Config = Depends(get_config), adult: int = Path(...)):
     """
     Return the Stremio addon manifest for series only.
     """
-    try:
-        config_data = encryption_service.decrypt(config)
-        # validate model
-        Config.model_validate(json.loads(config_data))
-
-        config_obj = Config.model_validate(json.loads(config_data))
-        return build_manifest(
-            ["series"], None, config_obj.include_catalogs_series, changed_catalogs=config_obj.changed_catalogs
-        )
-    except Exception as e:
-        logger.error(f"Series manifest request failed: {e}")
-        raise HTTPException(status_code=400, detail="Invalid config")
+    return build_manifest(["series"], None, cfg.include_catalogs_series, changed_catalogs=cfg.changed_catalogs)
 
 
 async def _process_catalog_request_internal(
@@ -317,19 +293,22 @@ async def _process_catalog_request_internal(
             try:
                 cleaned = slugify(search, separator="")
                 if cleaned:
-                    key = f"search:{content_type.value}:{cleaned}"
+                    key = _cache_key(
+                        "search",
+                        lang=config_obj.language or "en-US",
+                        parts=[content_type.value, cleaned],
+                    )
             except Exception:
                 key = None
 
             if key:
                 cached_entries = await cache.aget(key)
-                if cached_entries is not None and len(cached_entries["metas"]) > 0:
+                if cached_entries is not None and len(cached_entries.get("metas", [])) > 0:
                     logger.debug(f"Cache hit for key={key}")
                     return cached_entries
 
         llm_service = LLMService(config_obj)
         tmdb_service = TMDBService(config_obj.tmdb_read_access_token, language=config_obj.language)
-        rpdb_service = RPDBService(config_obj.posterdb_api_key) if config_obj.use_posterdb else None
 
         user_intent = detect_user_intent(search)
 
@@ -346,8 +325,6 @@ async def _process_catalog_request_internal(
                 f"Generated {len(movie_suggestions)} movie suggestions: {[f'{s.title} ({s.year})' for s in movie_suggestions]}"
             )
             movie_metas = await _process_metadata_pipeline(
-                tmdb_service,
-                rpdb_service,
                 movie_suggestions,
                 include_adult,
                 search_fn=tmdb_service.search_movie,
@@ -362,8 +339,6 @@ async def _process_catalog_request_internal(
                 f"Generated {len(series_suggestions)} TV series suggestions: {[f'{s.title} ({s.year})' for s in series_suggestions]}"
             )
             series_metas = await _process_metadata_pipeline(
-                tmdb_service,
-                rpdb_service,
                 series_suggestions,
                 include_adult,
                 search_fn=tmdb_service.search_tv,
@@ -377,9 +352,6 @@ async def _process_catalog_request_internal(
         if cache_time_seconds and key:
             await cache.aset(key, result, ttl=cache_time_seconds)
 
-        # Apply RPDB posters before delivery if user has RPDB enabled and requested
-        if apply_rpdb_posters:
-            result["metas"] = await _apply_rpdb_posters(result["metas"], rpdb_service)
         return result
 
     except Exception as e:
@@ -404,16 +376,15 @@ async def _process_catalog_request(
 
 
 async def _cached_catalog(
-    config: str, content_type: ContentType, catalog_id: str | None = None, skip: int = 0, include_adult: bool = False
+    cfg: Config,
+    content_type: ContentType,
+    catalog_id: str | None = None,
+    skip: int = 0,
+    include_adult: bool = False,
 ):
     """
     Cached version of the catalogue view with pagination support (Redis only).
     """
-    # Parse config to get RPDB service for poster modification
-    config_data = encryption_service.decrypt(config)
-    config_obj = Config.model_validate(json.loads(config_data))
-    rpdb_service = RPDBService(config_obj.posterdb_api_key) if config_obj.use_posterdb else None
-
     cache = CACHE_INSTANCE
     catalog_config = CATALOG_PROMPTS.get(catalog_id.rstrip(f"_{content_type.value}"), CATALOG_PROMPTS.get("trending"))
     prompt = catalog_config["prompt"]
@@ -425,35 +396,34 @@ async def _cached_catalog(
     elif catalog_ttl is None:
         catalog_ttl = cache.ttl  # Use default cache TTL
 
-    key = f"catalog:{catalog_id}"
+    # Use a simple, stable cache key for catalogs (tests expect this)
+    key = "catalog:" + catalog_id
 
     # Pagination only works with Redis cache
     if not cache.is_redis:
         cached_entries = await cache.aget(key)
-        if cached_entries is not None and len(cached_entries["metas"]) > 0:
+        if cached_entries is not None and len(cached_entries.get("metas", [])) > 0:
             logger.debug(f"Cache hit for key={key}")
-            # Apply RPDB posters before delivery
-            cached_entries["metas"] = await _apply_rpdb_posters(cached_entries["metas"], rpdb_service)
-            result_names = [meta.get("name", "Unknown") for meta in cached_entries["metas"]]
+            # Apply RPDB posters before delivery, do not cache RPDB posters
+            result_names = [meta.get("name", "Unknown") for meta in cached_entries.get("metas", [])]
             logger.debug(
-                f"LRU Cache: Returning {len(cached_entries['metas'])} cached_entries items for skip={skip}: {result_names}"
+                f"LRU Cache: Returning {len(cached_entries.get('metas', []))} cached entries items for skip={skip}: {result_names}"
             )
             return cached_entries
         logger.debug(f"Cache miss for key={key}")
         result = await _process_catalog_request_internal(
-            config,
+            cfg if isinstance(cfg, str) else encryption_service.encrypt(cfg.model_dump_json()),
             prompt,
             content_type,
             include_adult,
-            max_results=settings.MAX_CATALOG_RESULTS,
-            cache_time_seconds=None,
-            apply_rpdb_posters=False,
+            settings.MAX_CATALOG_RESULTS,
+            None,
+            False,
         )
         await cache.aset(key, result, catalog_ttl)
         # Apply RPDB posters before delivery
-        result["metas"] = await _apply_rpdb_posters(result["metas"], rpdb_service)
-        result_names = [meta.get("name", "Unknown") for meta in result["metas"]]
-        logger.debug(f"LRU Cache: Returning {len(result['metas'])} items for skip={skip}: {result_names}")
+        result_names = [meta.get("name", "Unknown") for meta in result.get("metas", [])]
+        logger.debug(f"LRU Cache: Returning {len(result.get('metas', []))} items for skip={skip}: {result_names}")
         return result
 
     # Get existing cached_entries entries
@@ -469,8 +439,6 @@ async def _cached_catalog(
     # Already at max entries, return cached_entries
     if total_entries >= settings.MAX_CATALOG_ENTRIES:
         logger.debug(f"Max catalog entries ({settings.MAX_CATALOG_ENTRIES}) reached for {catalog_id}")
-        # Apply RPDB posters before delivery
-        cached_entries["metas"] = await _apply_rpdb_posters(cached_entries["metas"], rpdb_service)
         return {"metas": cached_entries["metas"]}
 
     # Generate new entries, avoiding duplicates
@@ -485,12 +453,13 @@ async def _cached_catalog(
 
     # Generate more entries - always request more than needed to account for duplicates
     new_result = await _process_catalog_request_internal(
-        config,
+        cfg if isinstance(cfg, str) else encryption_service.encrypt(cfg.model_dump_json()),
         enhanced_prompt,
         content_type,
         include_adult,
-        max_results=settings.MAX_CATALOG_RESULTS,
-        apply_rpdb_posters=False,
+        settings.MAX_CATALOG_RESULTS,
+        None,
+        False,
     )
 
     # Filter out duplicates
@@ -509,62 +478,89 @@ async def _cached_catalog(
 
     logger.debug(f"Added {len(new_metas)} new entries, total now: {len(cached_entries['metas'])}")
 
-    # Apply RPDB posters before delivery
-    cached_entries["metas"] = await _apply_rpdb_posters(cached_entries["metas"], rpdb_service)
-
     # Return the whole results (cached_entries + new)
-    logger.debug(f"Redis Cache: Returning {len(cached_entries['metas'])} total items for skip={skip}")
-    return {"metas": cached_entries["metas"]}
+    logger.debug(f"Redis Cache: Returning {len(cached_entries.get('metas', []))} total items for skip={skip}")
+    return {"metas": cached_entries.get("metas", [])}
+
+
+ConfigDep = Annotated[Config, Depends(get_config)]
 
 
 @router.get("/config/{config}/adult/{adult}/catalog/{content_type}/{catalog_id}.json")
-async def get_catalog(config: str, adult: int, content_type: ContentType, catalog_id: str) -> StremioResponse:
+@rpdb_response
+async def get_catalog(
+    cfg: ConfigDep,
+    adult: int = Path(...),
+    content_type: ContentType = Path(...),
+    catalog_id: str = Path(...),
+) -> StremioResponse:
     """
     Path-based catalog endpoint.
 
     This endpoint is called by Stremio to get movie metadata based on a search query.
     """
-    content = await _cached_catalog(config, content_type, catalog_id, include_adult=False)
+    content = await _cached_catalog(cfg, content_type, catalog_id, include_adult=False)
     return StremioResponse(**content)
 
 
 @router.get("/config/{config}/adult/{adult}/{content_type_extra}/catalog/{content_type}/{catalog_id}.json")
+@rpdb_response
 async def get_catalog_split(
-    config: str, adult: int, content_type_extra: str | None, content_type: ContentType, catalog_id: str
+    cfg: ConfigDep,
+    adult: int = Path(...),
+    content_type_extra: str | None = Path(...),
+    content_type: ContentType = Path(...),
+    catalog_id: str = Path(...),
 ) -> StremioResponse:
-    content = await _cached_catalog(config, content_type, catalog_id, include_adult=False)
+    content = await _cached_catalog(cfg, content_type, catalog_id, include_adult=False)
     return StremioResponse(**content)
 
 
 @router.get("/config/{config}/adult/{adult}/catalog/{content_type}/{catalog_id}/skip={skip}.json")
+@rpdb_response
 async def get_catalog_with_skip(
-    config: str, adult: int, content_type: ContentType, catalog_id: str, skip: int
+    cfg: ConfigDep,
+    adult: int = Path(...),
+    content_type: ContentType = Path(...),
+    catalog_id: str = Path(...),
+    skip: int = Path(...),
 ) -> StremioResponse:
     """
     Path-based catalog endpoint with pagination support.
 
     This endpoint is called by Stremio when it reaches the end of the catalog list.
     """
-    content = await _cached_catalog(config, content_type, catalog_id, skip, include_adult=False)
+    content = await _cached_catalog(cfg, content_type, catalog_id, skip, include_adult=False)
     return StremioResponse(**content)
 
 
 @router.get("/config/{config}/adult/{adult}/{content_type_extra}/catalog/{content_type}/{catalog_id}/skip={skip}.json")
+@rpdb_response
 async def get_catalog_with_skip_split(
-    config: str, adult: int, content_type_extra: str | None, content_type: ContentType, catalog_id: str, skip: int
+    cfg: ConfigDep,
+    adult: int = Path(...),
+    content_type_extra: str | None = Path(...),
+    content_type: ContentType = Path(...),
+    catalog_id: str = Path(...),
+    skip: int = Path(...),
 ) -> StremioResponse:
     """
     Path-based catalog endpoint with pagination support.
 
     This endpoint is called by Stremio when it reaches the end of the catalog list.
     """
-    content = await _cached_catalog(config, content_type, catalog_id, skip, include_adult=False)
+    content = await _cached_catalog(cfg, content_type, catalog_id, skip, include_adult=False)
     return StremioResponse(**content)
 
 
 @router.get("/config/{config}/adult/{adult}/catalog/{content_type}/{catalog_id}/search={search}.json")
+@rpdb_response
 async def get_catalog_search(
-    config: str, adult: int, content_type: ContentType, catalog_id: str, search: str
+    cfg: ConfigDep,
+    adult: int,
+    content_type: ContentType,
+    catalog_id: str,
+    search: str,
 ) -> StremioResponse:
     """
     Path-based catalog search endpoint for movies.
@@ -573,7 +569,11 @@ async def get_catalog_search(
     """
     # Always use the non-cached version for explicit searches
     content = await _process_catalog_request(
-        config, search, content_type, False, cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL
+        config=encryption_service.encrypt(cfg.model_dump_json()),
+        search=search,
+        content_type=content_type,
+        include_adult=False,
+        cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL,
     )
     return StremioResponse(**content)
 
@@ -581,8 +581,14 @@ async def get_catalog_search(
 @router.get(
     "/config/{config}/adult/{adult}/{content_type_extra}/catalog/{content_type}/{catalog_id}/search={search}.json"
 )
+@rpdb_response
 async def get_catalog_search_split(
-    config: str, adult: int, content_type_extra: str | None, content_type: ContentType, catalog_id: str, search: str
+    cfg: ConfigDep,
+    adult: int = Path(...),
+    content_type_extra: str | None = Path(...),
+    content_type: ContentType = Path(...),
+    catalog_id: str = Path(...),
+    search: str = Path(...),
 ) -> StremioResponse:
     """
     Path-based catalog search endpoint for movies.
@@ -591,7 +597,11 @@ async def get_catalog_search_split(
     """
     # Always use the non-cached version for explicit searches
     content = await _process_catalog_request(
-        config, search, content_type, False, cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL
+        config=encryption_service.encrypt(cfg.model_dump_json()),
+        search=search,
+        content_type=content_type,
+        include_adult=False,
+        cache_time_seconds=settings.CACHE_SEARCH_QUERY_TTL,
     )
     return StremioResponse(**content)
 

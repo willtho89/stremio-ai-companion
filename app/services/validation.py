@@ -53,7 +53,11 @@ class ConfigValidationService:
             ]
 
             response = await client.chat.completions.create(
-                model=config.model_name, messages=messages, max_tokens=30, temperature=0
+                model=config.model_name,
+                messages=messages,
+                max_tokens=30,
+                temperature=0,
+                reasoning_effort="low",
             )
 
             if not response.choices:

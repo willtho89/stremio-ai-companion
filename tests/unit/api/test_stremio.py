@@ -8,13 +8,22 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api import app
+from app.api.deps import get_config
 from app.models.config import Config
 from app.core.config import settings
 
 
 @pytest.fixture
 def client():
-    """Fixture providing a TestClient instance."""
+    """Fixture providing a TestClient instance (no dependency override)."""
+    app.dependency_overrides.pop(get_config, None)
+    return TestClient(app)
+
+
+@pytest.fixture
+def client_with_cfg():
+    """Fixture providing a TestClient with get_config override (happy-path)."""
+    app.dependency_overrides[get_config] = lambda: Config()
     return TestClient(app)
 
 
@@ -28,7 +37,7 @@ def mock_encryption_service():
 class TestStremioRouter:
     """Tests for the Stremio router endpoints."""
 
-    def test_get_manifest(self, client, mock_encryption_service):
+    def test_get_manifest(self, client_with_cfg, mock_encryption_service):
         """Test the manifest endpoint returns valid combined structure."""
         # Mock the encryption service to return a valid config
         config = Config(
@@ -37,7 +46,7 @@ class TestStremioRouter:
         )
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
-        response = client.get("/config/encrypted_config/adult/0/manifest.json")
+        response = client_with_cfg.get("/config/encrypted_config/adult/0/manifest.json")
 
         assert response.status_code == 200
         manifest = response.json()
@@ -64,7 +73,7 @@ class TestStremioRouter:
         assert response.status_code == 400
         assert "detail" in response.json()
 
-    def test_get_movie_manifest(self, client, mock_encryption_service):
+    def test_get_movie_manifest(self, client_with_cfg, mock_encryption_service):
         """Test the dedicated movie manifest endpoint."""
         config = Config(
             openai_api_key="sk-test123456789012345678901234567890",
@@ -72,7 +81,7 @@ class TestStremioRouter:
         )
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
-        response = client.get("/config/encrypted_config/adult/0/movie/manifest.json")
+        response = client_with_cfg.get("/config/encrypted_config/adult/0/movie/manifest.json")
 
         assert response.status_code == 200
         manifest = response.json()
@@ -85,7 +94,7 @@ class TestStremioRouter:
         for catalog in manifest["catalogs"]:
             assert catalog["type"] == "movie"
 
-    def test_get_series_manifest(self, client, mock_encryption_service):
+    def test_get_series_manifest(self, client_with_cfg, mock_encryption_service):
         """Test the dedicated series manifest endpoint."""
         config = Config(
             openai_api_key="sk-test123456789012345678901234567890",
@@ -93,7 +102,7 @@ class TestStremioRouter:
         )
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
-        response = client.get("/config/encrypted_config/adult/0/series/manifest.json")
+        response = client_with_cfg.get("/config/encrypted_config/adult/0/series/manifest.json")
 
         assert response.status_code == 200
         manifest = response.json()
@@ -124,7 +133,7 @@ class TestStremioRouter:
         assert response.status_code == 400
         assert "detail" in response.json()
 
-    def test_get_movie_catalog_route(self, client, mock_encryption_service):
+    def test_get_movie_catalog_route(self, client_with_cfg, mock_encryption_service):
         """Test the movie-specific catalog route."""
         config = Config(
             openai_api_key="sk-test123456789012345678901234567890",
@@ -133,13 +142,13 @@ class TestStremioRouter:
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
         # Use a valid catalog ID from CATALOG_PROMPTS
-        response = client.get("/config/encrypted_config/adult/0/catalog/movie/trending_movie.json")
+        response = client_with_cfg.get("/config/encrypted_config/adult/0/catalog/movie/trending_movie.json")
 
         assert response.status_code == 200
         data = response.json()
         assert "metas" in data
 
-    def test_get_series_catalog_route(self, client, mock_encryption_service):
+    def test_get_series_catalog_route(self, client_with_cfg, mock_encryption_service):
         """Test the series-specific catalog route."""
         config = Config(
             openai_api_key="sk-test123456789012345678901234567890",
@@ -148,7 +157,7 @@ class TestStremioRouter:
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
         # Use a valid catalog ID from CATALOG_PROMPTS
-        response = client.get("/config/encrypted_config/adult/0/catalog/series/trending_series.json")
+        response = client_with_cfg.get("/config/encrypted_config/adult/0/catalog/series/trending_series.json")
 
         assert response.status_code == 200
         data = response.json()
