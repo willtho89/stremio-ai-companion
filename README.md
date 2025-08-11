@@ -145,7 +145,7 @@ These are loaded via Pydantic BaseSettings. Defaults shown are the in-code defau
 | OPENAI_API_KEY                 | OpenAI/OpenRouter-compatible API key                | —                            |
 | OPENAI_BASE_URL                | AI gateway base URL                                 | https://openrouter.ai/api/v1 |
 | DEFAULT_MODEL                  | Default model identifier                            | openai/gpt-5-mini:online     |
-| PREFERRED_SEARCH_USER_LANGUAGE | Preferred language for user search queries          | en-US                        |
+| PREFERRED_USER_SEARCH_LANGUAGE | Preferred language for user search queries          | en-US                        |
 | TMDB_API_KEY                   | TMDB v4 Read Access Token                           | —                            |
 | RPDB_API_KEY                   | RatingPosterDB API key (optional)                   | —                            |
 | MAX_CATALOG_RESULTS            | Max results returned per generation                 | 10                           |
