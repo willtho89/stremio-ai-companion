@@ -416,7 +416,7 @@ async def _cached_catalog(
             prompt,
             content_type,
             include_adult,
-            settings.MAX_CATALOG_RESULTS,
+            None,
             None,
             False,
         )
@@ -457,7 +457,7 @@ async def _cached_catalog(
         enhanced_prompt,
         content_type,
         include_adult,
-        settings.MAX_CATALOG_RESULTS,
+        None,
         None,
         False,
     )
