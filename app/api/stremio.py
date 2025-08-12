@@ -363,9 +363,7 @@ async def _process_catalog_request(
     """
     Public wrapper for catalog processing that always applies RPDB posters.
     """
-    return await _process_catalog_request_internal(
-        config, search, content_type, max_results, cache_time_seconds, apply_rpdb_posters=True
-    )
+    return await _process_catalog_request_internal(config, search, content_type, max_results, cache_time_seconds)
 
 
 async def _cached_catalog(
@@ -551,10 +549,10 @@ async def get_catalog_with_skip_split(
 @rpdb_response
 async def get_catalog_search(
     cfg: ConfigDep,
-    adult: int,
-    content_type: ContentType,
-    catalog_id: str,
-    search: str,
+    adult: int = 0,
+    content_type: ContentType = Path(...),
+    catalog_id: str = Path(...),
+    search: str = Path(...),
 ) -> StremioResponse:
     """
     Path-based catalog search endpoint for movies.
@@ -574,9 +572,7 @@ async def get_catalog_search(
 @router.get(
     "/config/{config}/adult/{adult}/{content_type_extra}/catalog/{content_type}/{catalog_id}/search={search}.json"
 )
-@router.get(
-    "/config/{config}/{content_type_extra}/catalog/{content_type}/{catalog_id}/search={search}.json"
-)
+@router.get("/config/{config}/{content_type_extra}/catalog/{content_type}/{catalog_id}/search={search}.json")
 @rpdb_response
 async def get_catalog_search_split(
     cfg: ConfigDep,

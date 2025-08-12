@@ -70,7 +70,6 @@ class TestTMDBService:
         args, kwargs = mock_get.call_args
         assert kwargs["params"]["primary_release_year"] == "1999"
 
-
     @patch("httpx.AsyncClient.get")
     async def test_search_movie_no_results(self, mock_get, tmdb_service):
         """Test movie search with no results."""

@@ -136,7 +136,11 @@ class TMDBService:
                 self.logger.error(f"TMDB request error for {endpoint}: {e}")
                 return None
 
-    async def search_movie(self, title: str, year: Optional[int] = None,) -> Optional[dict[str, Any]]:
+    async def search_movie(
+        self,
+        title: str,
+        year: Optional[int] = None,
+    ) -> Optional[dict[str, Any]]:
         """
         Search for a movie by title and optional year.
 
@@ -165,7 +169,9 @@ class TMDBService:
         return result
 
     async def search_tv(
-        self, title: str, year: Optional[int] = None,
+        self,
+        title: str,
+        year: Optional[int] = None,
     ) -> Optional[dict[str, Any]]:
         """
         Search for a TV series by title and optional year.
