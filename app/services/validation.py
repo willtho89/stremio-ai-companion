@@ -57,7 +57,6 @@ class ConfigValidationService:
                 messages=messages,
                 max_tokens=30,
                 temperature=0,
-                reasoning_effort="low",
             )
 
             if not response.choices:
