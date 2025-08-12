@@ -46,7 +46,7 @@ class TestStremioRouter:
         )
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/manifest.json")
+        response = client_with_cfg.get("/config/encrypted_config/manifest.json")
 
         assert response.status_code == 200
         manifest = response.json()
@@ -68,7 +68,7 @@ class TestStremioRouter:
         # Mock the encryption service to raise an exception
         mock_encryption_service.decrypt.side_effect = Exception("Invalid config")
 
-        response = client.get("/config/invalid_config/adult/0/manifest.json")
+        response = client.get("/config/invalid_config/manifest.json")
 
         assert response.status_code == 400
         assert "detail" in response.json()
@@ -81,7 +81,7 @@ class TestStremioRouter:
         )
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/movie/manifest.json")
+        response = client_with_cfg.get("/config/encrypted_config/movie/manifest.json")
 
         assert response.status_code == 200
         manifest = response.json()
@@ -102,7 +102,7 @@ class TestStremioRouter:
         )
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/series/manifest.json")
+        response = client_with_cfg.get("/config/encrypted_config/series/manifest.json")
 
         assert response.status_code == 200
         manifest = response.json()
@@ -119,7 +119,7 @@ class TestStremioRouter:
         """Test the movie manifest endpoint with invalid config."""
         mock_encryption_service.decrypt.side_effect = Exception("Invalid config")
 
-        response = client.get("/config/invalid_config/adult/0/movie/manifest.json")
+        response = client.get("/config/invalid_config/movie/manifest.json")
 
         assert response.status_code == 400
         assert "detail" in response.json()
@@ -128,7 +128,7 @@ class TestStremioRouter:
         """Test the series manifest endpoint with invalid config."""
         mock_encryption_service.decrypt.side_effect = Exception("Invalid config")
 
-        response = client.get("/config/invalid_config/adult/0/series/manifest.json")
+        response = client.get("/config/invalid_config/series/manifest.json")
 
         assert response.status_code == 400
         assert "detail" in response.json()
@@ -142,7 +142,7 @@ class TestStremioRouter:
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
         # Use a valid catalog ID from CATALOG_PROMPTS
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/catalog/movie/trending_movie.json")
+        response = client_with_cfg.get("/config/encrypted_config/catalog/movie/trending_movie.json")
 
         assert response.status_code == 200
         data = response.json()
@@ -157,7 +157,7 @@ class TestStremioRouter:
         mock_encryption_service.decrypt.return_value = config.model_dump_json()
 
         # Use a valid catalog ID from CATALOG_PROMPTS
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/catalog/series/trending_series.json")
+        response = client_with_cfg.get("/config/encrypted_config/catalog/series/trending_series.json")
 
         assert response.status_code == 200
         data = response.json()

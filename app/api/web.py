@@ -81,7 +81,6 @@ async def configure_page(request: Request, config: Optional[str] = Query(None), 
     If an adult parameter is provided, it will set the adult content checkbox.
     """
     existing_config = None
-    adult_flag = None
     if config:
         try:
             config_data = encryption_service.decrypt(config)
@@ -91,16 +90,11 @@ async def configure_page(request: Request, config: Optional[str] = Query(None), 
             logger.warning(f"Invalid config provided to configure page: {e}")
             raise
 
-    # Set adult flag from URL parameter if provided
-    if adult is not None:
-        adult_flag = False
-
     return templates.TemplateResponse(
         "configure.html",
         {
             "request": request,
             "existing_config": existing_config,
-            "adult_flag": adult_flag,
             "settings": settings,
             "LLMProvider": LLMProvider,
             "Languages": Languages,
@@ -109,8 +103,8 @@ async def configure_page(request: Request, config: Optional[str] = Query(None), 
     )
 
 
-@router.get("/config/{config}/adult/{adult}/preview", response_class=HTMLResponse)
-async def preview_page(request: Request, config: str, adult: int):
+@router.get("/config/{config}/preview", response_class=HTMLResponse)
+async def preview_page(request: Request, config: str):
     """
     Render the preview page with configuration details and manifest URL.
     """
@@ -120,8 +114,7 @@ async def preview_page(request: Request, config: str, adult: int):
         scheme = get_request_scheme(request)
 
         # Build manifest URLs for all types
-        adult_flag = 1 if adult else 0
-        base_url = f"{scheme}://{request.url.netloc}/config/{config}/adult/{adult_flag}"
+        base_url = f"{scheme}://{request.url.netloc}/config/{config}/"
         manifest_urls = {
             "combined": f"{base_url}/manifest.json",
             "movie": f"{base_url}/movie/manifest.json",
@@ -157,7 +150,6 @@ async def save_config(
     language: str = Form(settings.PREFERRED_USER_SEARCH_LANGUAGE),
     tmdb_read_access_token: str = Form(...),
     max_results: int = Form(20),
-    include_adult: Optional[str] = Form(None),
     use_posterdb: Optional[str] = Form(None),
     posterdb_api_key: str = Form(""),
     include_catalogs_movies: Optional[list[str]] = Form(None),
@@ -204,8 +196,7 @@ async def save_config(
         scheme = get_request_scheme(request)
 
         # Build manifest URLs for all types
-        adult_flag = 0
-        base_url = f"{scheme}://{request.url.netloc}/config/{encrypted_config}/adult/{adult_flag}"
+        base_url = f"{scheme}://{request.url.netloc}/config/{encrypted_config}"
         manifest_urls = {
             "combined": f"{base_url}/manifest.json",
             "movie": f"{base_url}/movie/manifest.json",
@@ -233,8 +224,8 @@ async def save_config(
         return JSONResponse({"success": False, "detail": f"Configuration error: {str(e)}"}, status_code=500)
 
 
-@router.get("/config/{config}/adult/{adult}/{content_type}/configure")
-async def reconfigure_page_redirect(config: str, adult: int, content_type: str):
+@router.get("/config/{config}/{content_type}/configure")
+async def reconfigure_page_redirect(config: str, content_type: str):
     """
     Redirect to configure page with existing config (content type agnostic).
     """

@@ -407,7 +407,6 @@
           // Extract config from current path: /config/{config}/adult/{adult}/preview
           const pathParts = window.location.pathname.split("/");
           const config = pathParts[2];
-          const adult = "0";
 
           // Determine which catalogs to search based on selected manifest type
           const activeGroup = document.querySelector(
@@ -431,8 +430,6 @@
               fetch(
                 `/config/${encodeURIComponent(
                   config
-                )}/adult/${encodeURIComponent(
-                  adult
                 )}/catalog/movie/local_companion_stremio_movie/search=${encodeURIComponent(
                   query
                 )}.json`
@@ -440,8 +437,6 @@
               fetch(
                 `/config/${encodeURIComponent(
                   config
-                )}/adult/${encodeURIComponent(
-                  adult
                 )}/catalog/series/local_companion_stremio_series/search=${encodeURIComponent(
                   query
                 )}.json`

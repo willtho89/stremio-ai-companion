@@ -50,7 +50,6 @@ class TestTMDBService:
         args, kwargs = mock_get.call_args
         assert args[0] == "https://api.themoviedb.org/3/search/movie"
         assert kwargs["params"]["query"] == "Fight Club"
-        assert kwargs["params"]["include_adult"] == "false"
 
     @patch("httpx.AsyncClient.get")
     async def test_search_movie_with_year(self, mock_get, tmdb_service):
@@ -71,24 +70,6 @@ class TestTMDBService:
         args, kwargs = mock_get.call_args
         assert kwargs["params"]["primary_release_year"] == "1999"
 
-    @patch("httpx.AsyncClient.get")
-    async def test_search_movie_with_adult_content(self, mock_get, tmdb_service):
-        """Test movie search with adult content included."""
-        # Mock the response
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "results": [{"id": 550, "title": "Fight Club", "release_date": "1999-10-15"}]
-        }
-        mock_get.return_value = mock_response
-
-        # Call the method
-        await tmdb_service.search_movie("Fight Club", include_adult=True)
-
-        # Verify the API was called with adult content excluded
-        mock_get.assert_called_once()
-        args, kwargs = mock_get.call_args
-        assert kwargs["params"]["include_adult"] == "false"
 
     @patch("httpx.AsyncClient.get")
     async def test_search_movie_no_results(self, mock_get, tmdb_service):
@@ -181,7 +162,6 @@ class TestTMDBService:
         args, kwargs = mock_get.call_args
         assert args[0] == "https://api.themoviedb.org/3/search/tv"
         assert kwargs["params"]["query"] == "Game of Thrones"
-        assert kwargs["params"]["include_adult"] == "false"
 
     @patch("httpx.AsyncClient.get")
     async def test_search_tv_with_year(self, mock_get, tmdb_service):
