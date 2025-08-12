@@ -27,7 +27,6 @@ def sample_config() -> Config:
         model_name="openai/gpt-5-mini:online",
         tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
         max_results=20,
-        include_adult=False,
         use_posterdb=False,
         posterdb_api_key=None,
     )
@@ -44,7 +43,6 @@ def sample_config_with_posterdb() -> Config:
         model_name="openai/gpt-5-mini:online",
         tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
         max_results=20,
-        include_adult=False,
         use_posterdb=True,
         posterdb_api_key="rpdb-test1234567890",
     )

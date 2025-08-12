@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0]
+
+### Fixed
+- Fixed catalog size ; Thanks to @EnriqueSantos-dev #15; fixes #14
+- reasoning effort; fixes #16
+
+### Removed
+- Adult Flag (legacy routes are still available)
+
+### Updated
+- Requirements
+
 ## [0.10.0]
 
 ### Added

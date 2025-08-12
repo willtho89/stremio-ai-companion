@@ -7,7 +7,6 @@ from unittest.mock import patch, AsyncMock
 import pytest
 
 from app.api.stremio import _cached_catalog
-from app.models.config import Config
 from app.models.enums import ContentType
 
 
@@ -30,24 +29,11 @@ def mock_process_catalog_request():
         yield mock_fn
 
 
-@pytest.fixture
-def mock_encryption_service():
-    """Fixture providing a mocked EncryptionService."""
-    with patch("app.api.stremio.encryption_service") as mock:
-        # Create a valid config for testing
-        config = Config(
-            openai_api_key="sk-test123456789012345678901234567890",
-            tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-        )
-        mock.decrypt.return_value = config.model_dump_json()
-        yield mock
-
-
 class TestCachedCatalog:
     """Tests for the _cached_catalog function."""
 
     @pytest.mark.asyncio
-    async def test_lru_cache_skip_zero(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
+    async def test_lru_cache_skip_zero(self, mock_cache, mock_process_catalog_request):
         """Test LRU cache behavior with skip=0."""
         # Set up cache miss
         mock_cache.aget.return_value = None
@@ -73,7 +59,7 @@ class TestCachedCatalog:
         assert mock_cache.aset.call_args[0][1] == result
 
     @pytest.mark.asyncio
-    async def test_lru_cache_hit(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
+    async def test_lru_cache_hit(self, mock_cache, mock_process_catalog_request):
         """Test LRU cache hit."""
         # Set up cache hit
         cached_data = {"metas": [{"name": "Cached Movie", "id": "cached-id"}]}
@@ -94,7 +80,7 @@ class TestCachedCatalog:
         mock_cache.aset.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_redis_cache_skip_zero(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
+    async def test_redis_cache_skip_zero(self, mock_cache, mock_process_catalog_request):
         """Test Redis cache behavior with skip=0."""
         # Set up Redis cache
         mock_cache.is_redis = True
@@ -116,9 +102,7 @@ class TestCachedCatalog:
         mock_cache.aset.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_redis_cache_with_existing_entries(
-        self, mock_cache, mock_process_catalog_request, mock_encryption_service
-    ):
+    async def test_redis_cache_with_existing_entries(self, mock_cache, mock_process_catalog_request):
         """Test Redis cache with existing entries."""
         # Set up Redis cache with existing entries
         mock_cache.is_redis = True
@@ -150,7 +134,7 @@ class TestCachedCatalog:
         }
 
     @pytest.mark.asyncio
-    async def test_redis_cache_pagination(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
+    async def test_redis_cache_pagination(self, mock_cache, mock_process_catalog_request):
         """Test Redis cache pagination."""
         # Set up Redis cache
         mock_cache.is_redis = True
@@ -182,7 +166,7 @@ class TestCachedCatalog:
         assert result == {"metas": expected_metas}
 
     @pytest.mark.asyncio
-    async def test_redis_cache_max_entries(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
+    async def test_redis_cache_max_entries(self, mock_cache, mock_process_catalog_request):
         """Test Redis cache with maximum entries reached."""
         # Set up Redis cache
         mock_cache.is_redis = True
@@ -205,7 +189,7 @@ class TestCachedCatalog:
             assert result == {"metas": existing_entries["metas"]}
 
     @pytest.mark.asyncio
-    async def test_catalog_id_fallback(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
+    async def test_catalog_id_fallback(self, mock_cache, mock_process_catalog_request):
         """Test fallback to trending when catalog_id is invalid."""
         # Set up cache miss
         mock_cache.aget.return_value = None
@@ -221,7 +205,7 @@ class TestCachedCatalog:
         assert "trending" in prompt_arg.lower()
 
     @pytest.mark.asyncio
-    async def test_duplicate_filtering(self, mock_cache, mock_process_catalog_request, mock_encryption_service):
+    async def test_duplicate_filtering(self, mock_cache, mock_process_catalog_request):
         """Test filtering of duplicate entries in Redis cache."""
         # Set up Redis cache
         mock_cache.is_redis = True

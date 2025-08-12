@@ -2,8 +2,6 @@
 Tests for the Stremio API endpoints.
 """
 
-from unittest.mock import patch
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -27,26 +25,12 @@ def client_with_cfg():
     return TestClient(app)
 
 
-@pytest.fixture
-def mock_encryption_service():
-    """Fixture providing a mocked EncryptionService."""
-    with patch("app.api.stremio.encryption_service") as mock:
-        yield mock
-
-
 class TestStremioRouter:
     """Tests for the Stremio router endpoints."""
 
-    def test_get_manifest(self, client_with_cfg, mock_encryption_service):
+    def test_get_manifest(self, client_with_cfg):
         """Test the manifest endpoint returns valid combined structure."""
-        # Mock the encryption service to return a valid config
-        config = Config(
-            openai_api_key="sk-test123456789012345678901234567890",
-            tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-        )
-        mock_encryption_service.decrypt.return_value = config.model_dump_json()
-
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/manifest.json")
+        response = client_with_cfg.get("/config/encrypted_config/manifest.json")
 
         assert response.status_code == 200
         manifest = response.json()
@@ -63,25 +47,17 @@ class TestStremioRouter:
         assert len(movie_catalogs) >= 1
         assert len(series_catalogs) >= 1
 
-    def test_get_manifest_invalid_config(self, client, mock_encryption_service):
+    def test_get_manifest_invalid_config(self, client):
         """Test the manifest endpoint with an invalid config."""
         # Mock the encryption service to raise an exception
-        mock_encryption_service.decrypt.side_effect = Exception("Invalid config")
-
-        response = client.get("/config/invalid_config/adult/0/manifest.json")
+        response = client.get("/config/invalid_config/manifest.json")
 
         assert response.status_code == 400
         assert "detail" in response.json()
 
-    def test_get_movie_manifest(self, client_with_cfg, mock_encryption_service):
+    def test_get_movie_manifest(self, client_with_cfg):
         """Test the dedicated movie manifest endpoint."""
-        config = Config(
-            openai_api_key="sk-test123456789012345678901234567890",
-            tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-        )
-        mock_encryption_service.decrypt.return_value = config.model_dump_json()
-
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/movie/manifest.json")
+        response = client_with_cfg.get("/config/encrypted_config/movie/manifest.json")
 
         assert response.status_code == 200
         manifest = response.json()
@@ -94,15 +70,9 @@ class TestStremioRouter:
         for catalog in manifest["catalogs"]:
             assert catalog["type"] == "movie"
 
-    def test_get_series_manifest(self, client_with_cfg, mock_encryption_service):
+    def test_get_series_manifest(self, client_with_cfg):
         """Test the dedicated series manifest endpoint."""
-        config = Config(
-            openai_api_key="sk-test123456789012345678901234567890",
-            tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-        )
-        mock_encryption_service.decrypt.return_value = config.model_dump_json()
-
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/series/manifest.json")
+        response = client_with_cfg.get("/config/encrypted_config/series/manifest.json")
 
         assert response.status_code == 200
         manifest = response.json()
@@ -115,49 +85,47 @@ class TestStremioRouter:
         for catalog in manifest["catalogs"]:
             assert catalog["type"] == "series"
 
-    def test_get_movie_manifest_invalid_config(self, client, mock_encryption_service):
+    def test_get_movie_manifest_invalid_config(
+        self,
+        client,
+    ):
         """Test the movie manifest endpoint with invalid config."""
-        mock_encryption_service.decrypt.side_effect = Exception("Invalid config")
 
-        response = client.get("/config/invalid_config/adult/0/movie/manifest.json")
+        response = client.get("/config/invalid_config/movie/manifest.json")
 
         assert response.status_code == 400
         assert "detail" in response.json()
 
-    def test_get_series_manifest_invalid_config(self, client, mock_encryption_service):
+    def test_get_series_manifest_invalid_config(
+        self,
+        client,
+    ):
         """Test the series manifest endpoint with invalid config."""
-        mock_encryption_service.decrypt.side_effect = Exception("Invalid config")
 
-        response = client.get("/config/invalid_config/adult/0/series/manifest.json")
+        response = client.get("/config/invalid_config/series/manifest.json")
 
         assert response.status_code == 400
         assert "detail" in response.json()
 
-    def test_get_movie_catalog_route(self, client_with_cfg, mock_encryption_service):
+    def test_get_movie_catalog_route(
+        self,
+        client_with_cfg,
+    ):
         """Test the movie-specific catalog route."""
-        config = Config(
-            openai_api_key="sk-test123456789012345678901234567890",
-            tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-        )
-        mock_encryption_service.decrypt.return_value = config.model_dump_json()
-
         # Use a valid catalog ID from CATALOG_PROMPTS
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/catalog/movie/trending_movie.json")
+        response = client_with_cfg.get("/config/encrypted_config/catalog/movie/trending_movie.json")
 
         assert response.status_code == 200
         data = response.json()
         assert "metas" in data
 
-    def test_get_series_catalog_route(self, client_with_cfg, mock_encryption_service):
+    def test_get_series_catalog_route(
+        self,
+        client_with_cfg,
+    ):
         """Test the series-specific catalog route."""
-        config = Config(
-            openai_api_key="sk-test123456789012345678901234567890",
-            tmdb_read_access_token="eyJhbGciOiJIUzI1NiJ9.test1234567890",
-        )
-        mock_encryption_service.decrypt.return_value = config.model_dump_json()
-
         # Use a valid catalog ID from CATALOG_PROMPTS
-        response = client_with_cfg.get("/config/encrypted_config/adult/0/catalog/series/trending_series.json")
+        response = client_with_cfg.get("/config/encrypted_config/catalog/series/trending_series.json")
 
         assert response.status_code == 200
         data = response.json()

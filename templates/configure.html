@@ -264,7 +264,17 @@
             </div>
             
             <div class="form-group">
-                <label for="max_results">Max Results: <span id="max_results_value">{% if existing_config %}{{ existing_config.max_results }}{% else %}20{% endif %}</span></label>
+                <label for="max_results">
+                        Max Results: <span id="max_results_value">
+                        {% if existing_config and existing_config.max_results %}
+                            {{ existing_config.max_results }}
+                        {% elif settings and settings.MAX_CATALOG_RESULTS %}
+                            {{ settings.MAX_CATALOG_RESULTS }}
+                        {% else %}
+                            20
+                        {% endif %}
+                    </span>
+                </label>
                 <input type="range" id="max_results" name="max_results" 
                        value="{% if existing_config %}{{ existing_config.max_results }}{% else %}20{% endif %}" min="1" max="30" step="1" oninput="document.getElementById('max_results_value').textContent=this.value">
                 <div class="help-text">Maximum number of results per search (1–30)</div>

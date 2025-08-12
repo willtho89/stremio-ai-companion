@@ -15,7 +15,6 @@ class TMDBSearchParams(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     query: str
-    include_adult: bool = False
     language: str
     page: int = 1
     year: Optional[int] = None
@@ -29,7 +28,7 @@ class TMDBMovieSearchParams(TMDBSearchParams):
         """Convert to API parameters dictionary."""
         params = {
             "query": self.query,
-            "include_adult": "true" if self.include_adult else "false",
+            "include_adult": "false",
             "language": self.language,
             "page": str(self.page),
         }
@@ -46,7 +45,7 @@ class TMDBTVSearchParams(TMDBSearchParams):
         """Convert to API parameters dictionary."""
         params = {
             "query": self.query,
-            "include_adult": "true" if self.include_adult else "false",
+            "include_adult": "false",
             "language": self.language,
             "page": str(self.page),
         }
@@ -138,7 +137,9 @@ class TMDBService:
                 return None
 
     async def search_movie(
-        self, title: str, year: Optional[int] = None, include_adult: bool = False
+        self,
+        title: str,
+        year: Optional[int] = None,
     ) -> Optional[dict[str, Any]]:
         """
         Search for a movie by title and optional year.
@@ -146,14 +147,13 @@ class TMDBService:
         Args:
             title: Movie title to search for
             year: Optional release year to filter by
-            include_adult: Whether to include adult content in results
 
         Returns:
             Dictionary with movie data or None if not found
         """
         self.logger.debug(f"Searching TMDB for movie: '{title}'" + (f" ({year})" if year else ""))
 
-        search_params = TMDBMovieSearchParams(query=title, year=year, include_adult=False, language=self.language)
+        search_params = TMDBMovieSearchParams(query=title, year=year, language=self.language)
 
         data = await self._make_request("search/movie", search_params.api_params)
 
@@ -169,7 +169,9 @@ class TMDBService:
         return result
 
     async def search_tv(
-        self, title: str, year: Optional[int] = None, include_adult: bool = False
+        self,
+        title: str,
+        year: Optional[int] = None,
     ) -> Optional[dict[str, Any]]:
         """
         Search for a TV series by title and optional year.
@@ -177,14 +179,13 @@ class TMDBService:
         Args:
             title: TV series title to search for
             year: Optional first air date year to filter by
-            include_adult: Whether to include adult content in results
 
         Returns:
             Dictionary with TV series data or None if not found
         """
         self.logger.debug(f"Searching TMDB for TV series: '{title}'" + (f" ({year})" if year else ""))
 
-        search_params = TMDBTVSearchParams(query=title, year=year, include_adult=False, language=self.language)
+        search_params = TMDBTVSearchParams(query=title, year=year, language=self.language)
 
         data = await self._make_request("search/tv", search_params.api_params)
 
