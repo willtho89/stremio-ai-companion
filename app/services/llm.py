@@ -215,7 +215,6 @@ If this is about current streaming content, use web search for accurate informat
             temperature=self._default_temperature,
             max_tokens=self._default_max_tokens,
             timeout=self._default_timeout,
-            reasoning_effort="minimal",
         )
 
         parsed_object = response.choices[0].message.parsed
@@ -250,7 +249,6 @@ If this is about current streaming content, use web search for accurate informat
             temperature=self._default_temperature,
             max_tokens=self._default_max_tokens,
             timeout=self._default_timeout,
-            reasoning_effort="low",
         )
 
         content = response.choices[0].message.content

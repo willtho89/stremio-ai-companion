@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1]
+
+### Fixed
+- Removed reasoing effort
+
+### Updated
+- Requirements
+
 ## [0.11.0]
 
 ### Fixed
