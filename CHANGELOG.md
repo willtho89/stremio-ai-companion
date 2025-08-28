@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0]
+
+### Added
+- optional Socks support
+
 ## [0.11.1]
 
 ### Fixed
