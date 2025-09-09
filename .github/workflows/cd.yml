@@ -35,7 +35,7 @@ jobs:
 
       - name: Check if app/__init__.py changed in head commit
         id: check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -111,7 +111,7 @@ jobs:
             VCS_REF=${{ github.sha }}
 
       - name: Create git tag for version
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
