@@ -4,7 +4,7 @@ httpx[socks]==0.28.1
 cryptography==46.0.2
 openai==2.3.0
 pydantic==2.11.10
-pydantic-settings==2.10.1
+pydantic-settings==2.11.0
 python-multipart==0.0.20
 python-slugify==8.0.4
 jinja2==3.1.6
