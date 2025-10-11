@@ -1,4 +1,4 @@
-fastapi==0.116.1
+fastapi==0.118.3
 uvicorn[standard]==0.37.0
 httpx[socks]==0.28.1
 cryptography==46.0.2
